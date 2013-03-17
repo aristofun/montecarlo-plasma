@@ -6,3 +6,6 @@
 .DS_*
 .idea/*
 out/*
+
+*.war
+*.ear
