@@ -7,7 +7,7 @@ See more at: http://en.wikipedia.org/wiki/Markov_chain_Monte_Carlo
 
 This code uses good random algorithm: http://www.cs.gmu.edu/~sean/research/
 
-It's made for multithreaded running of a set of point simultaneously.
+It's made for multithreaded running of a set of points simultaneously.
 
 Written for Java 7.
 
