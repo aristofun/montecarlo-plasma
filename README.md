@@ -13,5 +13,6 @@ Written for Java 7.
 
 BTW, it works fast, really fast!
 
-I mean, much faster than the same code written in C++ and compiled by GCC 4,
-both on Mac OS X (Intel Core i7) and Windows 7 (Inter Core 2 Duo).
+I mean, it's faster than the same code written in C++ and compiled by GCC 4, both on Mac OS X (Intel Core i7) and Windows 7 (Inter Core 2 Duo).
+
+Contact me: aristofun at ya.ru
