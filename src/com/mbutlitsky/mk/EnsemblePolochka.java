@@ -15,7 +15,6 @@ public class EnsemblePolochka extends Ensemble {
     public EnsemblePolochka(EOptions options) {
         super(options);
         myEpsilon = EPSILON;
-//        System.out.println(myEpsilon);
     }
 
     @Override

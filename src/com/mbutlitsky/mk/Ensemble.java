@@ -25,6 +25,10 @@ public abstract class Ensemble implements IEnsemble {
     private static final int SAVE_CORR_INT = 1200;
     private static final int CALC_CORR_INT = 600;
     public static double DELTA_FACTOR = 1.3;
+    /**
+     * overrides specific particle number in ini file if set in CLI options
+     */
+    public static int DEFAULT_NUM_PARTICLES = 0;
 
     private final NumberFormat FORMAT = new DecimalFormat(EOptions.SCIENTIFIC_FORMAT_STR);
     private final NumberFormat SHORT_FORMAT = new DecimalFormat(EOptions.SHORT_FORMAT_STR);
@@ -72,10 +76,10 @@ public abstract class Ensemble implements IEnsemble {
         halfBox = boxSize / 2.0;
         avgDistance = pow(opt.getDensity(), -0.333333333333333333) / BOHR;
 
-//        maxDelta = opt.getMaxDelta();
-        maxDelta = avgDistance * DELTA_FACTOR; // XXX ignore custom delta
+        // ignore specific delta factor if set to zero
+        maxDelta = (opt.getMaxDelta() == 0.0) ? DELTA_FACTOR : opt.getMaxDelta();
 
-        numPart = opt.getNumParticles();
+        numPart = (DEFAULT_NUM_PARTICLES == 0) ? opt.getNumParticles() : DEFAULT_NUM_PARTICLES;
         numSteps = opt.getNumSteps();
         T = opt.getT();
         myFolder = opt.getFolder();
@@ -136,8 +140,8 @@ public abstract class Ensemble implements IEnsemble {
                 try {
                     initArrays(Files.readAllLines(myConfigPath, Charset.defaultCharset()));
                 } catch (Exception e) {
-                    e.printStackTrace();
                     System.out.println("WARNING: failed to read config for " + myFolder);
+                    System.out.println(e.getLocalizedMessage());
                     opt.setOld(false);
                 }
             } else {

@@ -21,8 +21,16 @@ import static java.lang.Thread.sleep;
  * Time: 19:07
  */
 public class EnsembleController implements IEnsembleController {
-    /** how often check child ensembles & display status on console */
+    /**
+     * how often check child ensembles & display status on console
+     */
     public static int REFRESH_DELAY = 20000;
+
+    /**
+     * may be overriden by CLI options, if zero – max(2, CPUs/2) used
+     */
+    public static int NUM_THREADS = 0;
+
     private static final int SAVE_ENERGIES_INT = 35;
     private volatile boolean running = true;
 
@@ -31,7 +39,9 @@ public class EnsembleController implements IEnsembleController {
     private final NumberFormat FULL_FORMAT = new DecimalFormat(EOptions.SCIENTIFIC_FORMAT_STR);
 
     private final List<IEnsemble> ensembles = new ArrayList<IEnsemble>();
-    private final List<EOptions> continueOpts = new ArrayList<EOptions>();
+
+    // TODO: remove this rudiment
+//    private final List<EOptions> continueOpts = new ArrayList<EOptions>();
 
     //    private Map<IEnsemble, List> energies = new HashMap();
     private final Map<IEnsemble, Boolean> states = new HashMap<IEnsemble, Boolean>();
@@ -42,12 +52,17 @@ public class EnsembleController implements IEnsembleController {
     private final ExecutorService pool;
 
     public EnsembleController() {
-        System.out.println("Reading config...");
 
         int cores = Runtime.getRuntime().availableProcessors();
-        System.out.println("Running " + System.getProperty("os.name") + " with " + cores + " CPUs");
+        System.out.println("\nRunning " + System.getProperty("os.name") + " with " + cores + " " +
+                "CPUs");
 
-        pool = Executors.newFixedThreadPool((cores > 2) ? cores / 2 : cores);
+        if (NUM_THREADS == 0) {
+            NUM_THREADS = (cores > 2) ? cores / 2 : cores;
+        }
+
+        System.out.println("Executor pool has " + NUM_THREADS + " workers");
+        pool = Executors.newFixedThreadPool(NUM_THREADS);
 
         Set<EOptions> options = readConfig(CONFIG_FILE);
 
@@ -56,14 +71,15 @@ public class EnsembleController implements IEnsembleController {
             System.exit(2);
         }
 
+
         // setting main ensembles Lists
         for (EOptions opt : options) {
             IEnsemble ens = new EnsemblePolochka(opt);
             ensembles.add(ens);
             // additional config for continues
             opt.setOld(true);
-            continueOpts.add(opt);
-            //
+
+//            continueOpts.add(opt); HZ
 
             // fill mapping T -> ensembles list
             if (enrgValues.get(opt.getT()) == null) {
@@ -73,11 +89,13 @@ public class EnsembleController implements IEnsembleController {
             enrgValues.get(opt.getT()).put(ens, new ArrayList<Double>(6));
         }
 
-        System.out.println("Reading config done.\n\n");
+        System.out.println("\n");
     }
 
     @Override
     public void stop() {
+        if (!running) return;
+
         running = false;
 
         System.out.println("Somebody stopping controller...");
@@ -97,7 +115,7 @@ public class EnsembleController implements IEnsembleController {
         running = true;
 
         for (IEnsemble current : ensembles) {
-            sleep(rnd.nextInt(50, 500)); // some start time distribution to avoid clutter
+            sleep(rnd.nextInt(10, 150)); // some start time distribution to avoid clutter
             // thread pool filled
             pool.execute(current);
             states.put(current, new Boolean(true));
@@ -118,13 +136,13 @@ public class EnsembleController implements IEnsembleController {
         }
 
         saveEnergies();
-        System.out.println("Controller (" + ensembles.size() + " jobs) finished.");
+        System.out.println("Controller (" + ensembles.size() + " points) finished.");
         pool.shutdown();
         System.out.println("Thread pool shutted down.");
     }
 
     private void drawStatus() {
-        System.out.println("\n\n\n\n"); // clear screen
+        System.out.println("\n\n"); // clear screen
 
         // main ensembles refresh loop
         for (IEnsemble current : ensembles) {
@@ -202,9 +220,9 @@ public class EnsembleController implements IEnsembleController {
         return enrgValues.get(current.getOptions().getT()).get(current);
     }
 
-    public void saveContinueOptions() throws IOException {
-        Files.write(getPath(CONFIG_FILE + "_"), continueOpts, Charset.defaultCharset());
-    }
+//    public void saveContinueOptions() throws IOException {
+//        Files.write(getPath(CONFIG_FILE + "_"), continueOpts, Charset.defaultCharset());
+//    }
 
     public static final Path getPath(String path) {
         return FileSystems.getDefault().getPath(".", path);

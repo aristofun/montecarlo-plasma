@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "0.3";
+    public static final String version = "0.4";
 
     /**
      * @param args First – polochka deepness, Second – maxDelta factor times average distance
@@ -15,14 +15,12 @@ public class Main {
      */
     public static void main(String[] args) {
         Date start = new Date();
-        System.out.println("Monte-Karlo game v. " + version + ", (c) Michael Butlitsky 2013");
+        System.out.println("\nMonte-Karlo game v. " + version + ", (c) Michael Butlitsky 2013\n");
 
         // apache CLI lib options parser
         parseArgs(args);
 
-        System.out.println("Polochka set = " + EnsemblePolochka.EPSILON);
-        System.out.println("Delta factor set = " + Ensemble.DELTA_FACTOR);
-
+        System.out.println();
         System.out.println(start);// System.currentTimeMillis());
         Locale.setDefault(Locale.US); // for reading/writing '.' delimited doubles properly
 
@@ -42,31 +40,38 @@ public class Main {
             });
 
 
-            controller.saveContinueOptions();
+//            controller.saveContinueOptions();
             controller.start();
 
 
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println("FATAL: something fucked up: " + e.getLocalizedMessage());
+            System.out.println("FATAL: something fucked up – " + e.getLocalizedMessage());
             System.exit(1);
         }
 
         Date fin = new Date();
         System.out.println(fin);
-        System.out.println("Job took " + getHumanTimeDiff(start, fin) + ". Bye!");
+        System.out.println("\nJob took " + getHumanTimeDiff(start, fin) + ". Bye!\n");
     }
 
     private static void parseArgs(String[] args) {
         Option polka = OptionBuilder.withArgName("POLKA").hasArg().withDescription("polochka " +
-                "parameter value (2.0 default)").create("polka");
+                "parameter value (2.0 default)").withLongOpt("polka").create("po");
+
+        Option workers = OptionBuilder.withArgName("NUM").hasArg().withDescription("number of " +
+                "parallel threads (default is MAX(2, CPUs/2)").withLongOpt("workers").create("w");
+
+        Option particles = OptionBuilder.withArgName("NUM").hasArg().withDescription("number of " +
+                "particles, if set all mk_config.ini options ignored").withLongOpt("particles")
+                .create("pa");
 
         Option delta = OptionBuilder.withArgName("DELTA_FACTOR").hasArg()
-                .withDescription("maxDx coeff. (1.3 default)").create("delta");
+                .withDescription("maxDx coeff. (1.3 default)").withLongOpt("delta").create("d");
 
         Option refresh = OptionBuilder.withArgName("SECONDS").hasArg()
                 .withDescription("threads status refresh interval (20 sec. default)")
-                .create("refresh");
+                .withLongOpt("refresh").create("r");
 
 
         Options options = new Options();
@@ -74,6 +79,8 @@ public class Main {
         options.addOption(polka);
         options.addOption(delta);
         options.addOption(refresh);
+        options.addOption(workers);
+        options.addOption(particles);
 
         CommandLineParser parser = new BasicParser();
 
@@ -86,18 +93,32 @@ public class Main {
                 printHelpAndExit(options);
             }
 
-            if (line.hasOption("polka")) {
+            if (line.hasOption("pa")) {
+                Ensemble.DEFAULT_NUM_PARTICLES = Integer.parseInt(line.getOptionValue("pa"));
+                System.out.println("Custom particles number = " + Ensemble.DEFAULT_NUM_PARTICLES);
+            }
+
+            if (line.hasOption("po")) {
                 EnsemblePolochka.EPSILON = Double.parseDouble(line.getOptionValue("polka"));
             }
+            System.out.println("Polochka (electron-ion) = – " + EnsemblePolochka.EPSILON);
 
-            if (line.hasOption("delta")) {
-                Ensemble.DELTA_FACTOR = Double.parseDouble(line.getOptionValue("delta"));
+            if (line.hasOption("w")) {
+                EnsembleController.NUM_THREADS = Integer.parseInt(line.getOptionValue("workers"));
+                System.out.println("Custom workers count = " + EnsembleController.NUM_THREADS);
             }
 
-            if (line.hasOption("refresh")) {
+            if (line.hasOption("d")) {
+                Ensemble.DELTA_FACTOR = Double.parseDouble(line.getOptionValue("delta"));
+            }
+            System.out.println("Delta factor = " + Ensemble.DELTA_FACTOR);
+
+
+            if (line.hasOption("r")) {
                 EnsembleController.REFRESH_DELAY
                         = 1000 * Integer.parseInt(line.getOptionValue("refresh"));
             }
+            System.out.println("Status refresh delay = " + EnsembleController.REFRESH_DELAY/1000);
 
         } catch (Exception exp) {
             // oops, something went wrong
