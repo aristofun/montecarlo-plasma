@@ -74,7 +74,8 @@ public class EnsembleController implements IEnsembleController {
 
         // setting main ensembles Lists
         for (EOptions opt : options) {
-            IEnsemble ens = new EnsemblePolochka(opt);
+//            IEnsemble ens = new EnsemblePolochka(opt);
+            IEnsemble ens = new EnsemblePseudoPotential(opt);
             ensembles.add(ens);
             // additional config for continues
             opt.setOld(true);
@@ -131,7 +132,6 @@ public class EnsembleController implements IEnsembleController {
             drawStatus();
             // heavy status reports (saving energies & plots)
             if (i % SAVE_ENERGIES_INT == 0) saveEnergies();
-//            if (i % SAVE_PLOTS_INT == 0) saveEnergies();
             i++;
         }
 

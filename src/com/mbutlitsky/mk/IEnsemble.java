@@ -20,6 +20,7 @@ public interface IEnsemble extends Runnable {
     public static final double k = 1.3806488e-16;
 
     public static final String STATE_FILE = "config.dat";
+    public static final String LONGTAIL_FILE = "all_configs.dat";
     public static final String CORR_FILE = "correlation.dat";
     public static final int CORR_LENGTH = 70;
 

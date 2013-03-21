@@ -1,13 +1,14 @@
 package com.mbutlitsky.mk;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static com.mbutlitsky.mk.EnsembleController.getPath;
@@ -23,7 +24,7 @@ import static java.lang.Math.sqrt;
 public abstract class Ensemble implements IEnsemble {
     private static final int SAVE_CONFIG_INT = 501;
     private static final int SAVE_CORR_INT = 1200;
-    private static final int CALC_CORR_INT = 600;
+    private static final int CALC_CORR_INT = 709;
     public static double DELTA_FACTOR = 1.3;
     /**
      * overrides specific particle number in ini file if set in CLI options
@@ -40,6 +41,8 @@ public abstract class Ensemble implements IEnsemble {
     private Path myConfigPath;
     private Path myCorrPath;
     private volatile boolean finished = false;
+    private final boolean saveLongTail;
+    private BufferedWriter longTailWriter;
 
 
     // ------------ Monte Karlo --------------
@@ -77,7 +80,7 @@ public abstract class Ensemble implements IEnsemble {
         avgDistance = pow(opt.getDensity(), -0.333333333333333333) / BOHR;
 
         // ignore specific delta factor if set to zero
-        maxDelta = (opt.getMaxDelta() == 0.0) ? DELTA_FACTOR : opt.getMaxDelta();
+        maxDelta = (opt.getMaxDelta() == 0.0) ? DELTA_FACTOR * avgDistance : opt.getMaxDelta();
 
         numPart = (DEFAULT_NUM_PARTICLES == 0) ? opt.getNumParticles() : DEFAULT_NUM_PARTICLES;
         numSteps = opt.getNumSteps();
@@ -98,29 +101,32 @@ public abstract class Ensemble implements IEnsemble {
         Ys = new double[numPart];
         Zs = new double[numPart];
 
-        initFromStateFile();
+        // OPTIONS first bit == save longtail
+        saveLongTail = ((options.getStrategy() & 1) == 1);
+
+        loadFromStateFile();
         resetEnergy();
+
+        applyAdditionalStrategies();
     }
 
-    public static final void fillArray(double[] dabls, String line) {
-        String[] strs = line.split("\\s");
-        for (int i = 0; i < dabls.length; i++) {
-            dabls[i] = Double.parseDouble(strs[i]);
+    private void applyAdditionalStrategies() {
+        if (saveLongTail) {
+            try {
+                longTailWriter = Files.newBufferedWriter(getPath(myFolder + "/" + LONGTAIL_FILE),
+                        Charset.defaultCharset(), StandardOpenOption.CREATE,
+                        opt.isOld() ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING,
+                        StandardOpenOption.WRITE);
+            } catch (Exception e) {
+                System.out.println("ERROR: Can't create " + LONGTAIL_FILE + " for " + myFolder);
+            }
         }
-    }
-
-    protected final String doubleArrayToString(double[] dabls) {
-        String result = "";
-        for (double dabl : dabls) {
-            result += FORMAT.format(dabl) + "\t";
-        }
-        return result;
     }
 
     /**
      * reads config or generates new random if any errors ocurred
      */
-    private void initFromStateFile() {
+    private void loadFromStateFile() {
         myConfigPath = getPath(myFolder + "/" + STATE_FILE);
         myCorrPath = getPath(myFolder + "/" + CORR_FILE);
 
@@ -138,7 +144,7 @@ public abstract class Ensemble implements IEnsemble {
         if (opt.isOld()) {
             if (Files.exists(myConfigPath)) {
                 try {
-                    initArrays(Files.readAllLines(myConfigPath, Charset.defaultCharset()));
+                    loadArrays(Files.readAllLines(myConfigPath, Charset.defaultCharset()));
                 } catch (Exception e) {
                     System.out.println("WARNING: failed to read config for " + myFolder);
                     System.out.println(e.getLocalizedMessage());
@@ -255,14 +261,21 @@ public abstract class Ensemble implements IEnsemble {
     /**
      * throws IOException if no valid config could be read
      */
-    private void initArrays(List<String> strings) throws Exception {
+    private void loadArrays(List<String> strings) throws Exception {
         // first line: curr_step energy
         String step_en = strings.remove(0);
         currStep = Integer.parseInt(step_en.split("\\s+")[0]);
 
-        fillArray(Xs, strings.get(0));
-        fillArray(Ys, strings.get(1));
-        fillArray(Zs, strings.get(2));
+        if (strings.size() != numPart) {
+            throw new Exception("file size doesn't fit particles number");
+        }
+
+        for (int i = 0; i < strings.size(); i++) {
+            String[] strs = strings.get(i).split("\\s");
+            Xs[i] = Double.parseDouble(strs[0]);    //
+            Ys[i] = Double.parseDouble(strs[1]);    //
+            Zs[i] = Double.parseDouble(strs[2]);    //
+        }
     }
 
     private final void saveCorrelation() {
@@ -299,21 +312,26 @@ public abstract class Ensemble implements IEnsemble {
         resetEnergy();
         // create strings list from arrays
         try {
-            Files.write(myConfigPath, flushArrays(), Charset.defaultCharset());
+            BufferedWriter writer = Files.newBufferedWriter(myConfigPath, Charset.defaultCharset());
+
+            writer.write("" + currStep + "\t" + SHORT_FORMAT.format(energy / numPart) + "\t"
+                    + SHORT_FORMAT.format(opt.getGamma()));
+
+            writer.newLine();
+            writeStateTo(writer);
+            writer.close();
         } catch (IOException e) {
             e.printStackTrace();
             System.out.println("ERROR: failed to save state for " + myFolder);
         }
     }
 
-    private final List<String> flushArrays() {
-        return Arrays.asList(
-                "" + currStep + "\t" + SHORT_FORMAT.format(energy / numPart) + "\t"
-                        + SHORT_FORMAT.format(opt.getGamma()),
-                doubleArrayToString(Xs),
-                doubleArrayToString(Ys),
-                doubleArrayToString(Zs)
-        );
+    private void writeStateTo(BufferedWriter writer) throws IOException {
+        for (int i = 0; i < numPart; i++) {
+            writer.write(FORMAT.format(Xs[i]) + "\t"
+                    + FORMAT.format(Ys[i]) + "\t" + FORMAT.format(Zs[i]));
+            writer.newLine();
+        }
     }
 
     @Override
@@ -329,15 +347,15 @@ public abstract class Ensemble implements IEnsemble {
     public void run() {
         for (int i = currStep; i < numSteps; i++) {
             if (finished) {
-                saveState();
                 System.out.println("Exitting by stop " + myFolder + ", 'finished' found 'true'");
-                return;
+                break;
             }
 
             if (i % CALC_CORR_INT == 0) calcCorrelation();
             if (i % SAVE_CORR_INT == 0) saveCorrelation();
             if (i % SAVE_CONFIG_INT == 0) {
                 saveState();
+                if (saveLongTail) saveLongTail();
             }
 
             play();
@@ -346,7 +364,29 @@ public abstract class Ensemble implements IEnsemble {
 
         finished = true;
         saveState();
+        saveLongTail();
+        closeLongTail();
         System.out.println("Ensemble " + myFolder + " finished after " + numSteps + " steps.");
+    }
+
+    private void closeLongTail() {
+        if (saveLongTail) try {
+            longTailWriter.flush();
+            longTailWriter.close();
+        } catch (IOException e1) {
+            System.out.println("ERROR: can't close long tail writer for " + myFolder);
+        }
+    }
+
+    private void saveLongTail() {
+        try {
+            if (saveLongTail) {
+                writeStateTo(longTailWriter);
+                longTailWriter.flush();
+            }
+        } catch (IOException e1) {
+            System.out.println("ERROR: can't write " + myFolder + " long tail to writer!");
+        }
     }
 
     private final void fillCorrAray(int i, int j, int corrIndex) {

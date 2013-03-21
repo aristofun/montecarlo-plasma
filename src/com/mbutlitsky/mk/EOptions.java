@@ -24,6 +24,8 @@ public class EOptions implements CharSequence {
     private final double maxDelta;
     private int numParticles;
     private final int numSteps;
+
+    /** STRATEGY bits 0 – default, 1 – save longtail */
     private final int strategy;
     private final int T;
     private boolean isOld;
@@ -68,6 +70,11 @@ public class EOptions implements CharSequence {
     public int getT() {
         return T;
     }
+
+    public int getStrategy() {
+        return strategy;
+    }
+
 
     public boolean isOld() {
         return isOld;
