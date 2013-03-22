@@ -16,3 +16,19 @@ BTW, it works fast, really fast!
 I mean, it's faster than the same code written in C++ and compiled by GCC 4, both on Mac OS X (Intel Core i7) and Windows 7 (Inter Core 2 Duo).
 
 Contact me: aristofun at ya.ru
+
+
+==How to Run==
+
+runmk.bat [OPTIONS]  – on Windows
+
+./runmk.comman [OPTIONS] – on Mac
+
+Available options:
+
+ -h                          show this help and exit
+ -d,--delta <DELTA_FACTOR>   maxDx coeff. (1.3 default) for random particle shifts
+ -pa,--particles <NUM>       number of particles, if set all mk_config.ini options are ignored
+ -po,--polka <POLKA>         polochka parameter value (2.0 default) / not available for custom potentials
+ -r,--refresh <SECONDS>      console status refresh interval (20 sec. default)
+ -w,--workers <NUM>          number of parallel points to calculate (default is MAX(2, CPUs/2))
