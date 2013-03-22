@@ -33,3 +33,10 @@ Available options:
 		-po,--polka <POLKA>			polochka parameter value (2.0 default) / not available for custom potentials
 		-r,--refresh <SECONDS>		console status refresh interval (20 sec. default)
 		-w,--workers <NUM>			number of parallel points to calculate (default is MAX(2, CPUs/2))
+
+Main input data file is mk_config.ini, it contains points to be calculated. Each line defines a point. They will be calculated in the same order, results are saved in subfolders.
+Parameters must be delimited by any space character. Note that some global options above overrides individual points parameters if set.
+
+Line format:
+
+		T, Density, maxDx/y/z coeff., numParticles, numSteps, strategy (1 – save long tail configurations), resume existing config
