@@ -7,11 +7,17 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "0.4";
+    public static final String version = "0.5";
 
     /**
-     * @param args First – polochka deepness, Second – maxDelta factor times average distance
-     *             defaults are 2.0 and 1.3
+     * <pre>usage: (./runmk.command | runmk.bat) [OPTIONS]
+     * -d,--delta <DELTA_FACTOR>   maxDx coeff. (1.1 default)
+     * -h                          show this help and exit
+     * -pa,--particles <NUM>       number of particles, if set all mk_config.ini options ignored
+     * -po,--polka <POLKA>         polochka parameter value (2.0 default)
+     * -r,--refresh <SECONDS>      threads status refresh interval (30 sec. default)
+     * -w,--workers <NUM>          number of parallel threads (default is MAX(2, CPUs/2)
+     * </pre>
      */
     public static void main(String[] args) {
         Date start = new Date();
@@ -31,7 +37,7 @@ public class Main {
                 public void run() {
                     controller.stop();
                     try {
-                        Thread.sleep(EnsembleController.REFRESH_DELAY);
+                        Thread.sleep(EnsembleController.REFRESH_DELAY / 10);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -56,6 +62,9 @@ public class Main {
     }
 
     private static void parseArgs(String[] args) {
+        Option temp = OptionBuilder.withArgName("TEMP").hasArg().withDescription("temperature " +
+                "for polochka (1K default)").withLongOpt("temp").create("t");
+
         Option polka = OptionBuilder.withArgName("POLKA").hasArg().withDescription("polochka " +
                 "parameter value (2.0 default)").withLongOpt("polka").create("po");
 
@@ -67,15 +76,16 @@ public class Main {
                 .create("pa");
 
         Option delta = OptionBuilder.withArgName("DELTA_FACTOR").hasArg()
-                .withDescription("maxDx coeff. (1.3 default)").withLongOpt("delta").create("d");
+                .withDescription("maxDx coeff. (1.1 default)").withLongOpt("delta").create("d");
 
         Option refresh = OptionBuilder.withArgName("SECONDS").hasArg()
-                .withDescription("threads status refresh interval (20 sec. default)")
+                .withDescription("threads status refresh interval (30 sec. default)")
                 .withLongOpt("refresh").create("r");
 
 
         Options options = new Options();
         options.addOption("h", false, "show this help and exit");
+//        options.addOption(temp);
         options.addOption(polka);
         options.addOption(delta);
         options.addOption(refresh);
@@ -103,6 +113,11 @@ public class Main {
             }
             System.out.println("Polochka (electron-ion) = – " + EnsemblePolochka.EPSILON);
 
+//            if (line.hasOption("t")) {
+//                EnsemblePolochka.EPSILON = Double.parseDouble(line.getOptionValue("polka"));
+//            }
+            System.out.println("Polochka (electron-ion) = – " + EnsemblePolochka.EPSILON);
+
             if (line.hasOption("w")) {
                 EnsembleController.NUM_THREADS = Integer.parseInt(line.getOptionValue("workers"));
                 System.out.println("Custom workers count = " + EnsembleController.NUM_THREADS);
@@ -118,7 +133,7 @@ public class Main {
                 EnsembleController.REFRESH_DELAY
                         = 1000 * Integer.parseInt(line.getOptionValue("refresh"));
             }
-            System.out.println("Status refresh delay = " + EnsembleController.REFRESH_DELAY/1000);
+            System.out.println("Status refresh delay = " + EnsembleController.REFRESH_DELAY / 1000);
 
         } catch (Exception exp) {
             // oops, something went wrong

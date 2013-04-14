@@ -24,14 +24,14 @@ public class EnsembleController implements IEnsembleController {
     /**
      * how often check child ensembles & display status on console
      */
-    public static int REFRESH_DELAY = 20000;
+    public static int REFRESH_DELAY = 30000;
 
     /**
      * may be overriden by CLI options, if zero – max(2, CPUs/2) used
      */
     public static int NUM_THREADS = 0;
 
-    private static final int SAVE_ENERGIES_INT = 35;
+    private static final int SAVE_ENERGIES_INT = 17;
     private volatile boolean running = true;
 
     private static final String CONFIG_FILE = "mk_config.ini";
@@ -74,8 +74,8 @@ public class EnsembleController implements IEnsembleController {
 
         // setting main ensembles Lists
         for (EOptions opt : options) {
-//            IEnsemble ens = new EnsemblePolochka(opt);
-            IEnsemble ens = new EnsemblePseudoPotential(opt);
+            IEnsemble ens = new EnsemblePolochka(opt);
+//            IEnsemble ens = new EnsemblePseudoPotential(opt);
             ensembles.add(ens);
             // additional config for continues
             opt.setOld(true);

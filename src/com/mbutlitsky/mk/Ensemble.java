@@ -22,10 +22,10 @@ import static java.lang.Math.sqrt;
  * Time: 13:04
  */
 public abstract class Ensemble implements IEnsemble {
-    private static final int SAVE_CONFIG_INT = 501;
-    private static final int SAVE_CORR_INT = 1200;
-    private static final int CALC_CORR_INT = 709;
-    public static double DELTA_FACTOR = 1.3;
+    private static final int SAVE_CONFIG_INT = 401;
+    private static final int SAVE_CORR_INT = 1501;
+    private static final int CALC_CORR_INT = 611;
+    public static double DELTA_FACTOR = 1.1;
     /**
      * overrides specific particle number in ini file if set in CLI options
      */
