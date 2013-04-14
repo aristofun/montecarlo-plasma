@@ -111,12 +111,12 @@ public class Main {
             if (line.hasOption("po")) {
                 EnsemblePolochka.EPSILON = Double.parseDouble(line.getOptionValue("polka"));
             }
-            System.out.println("Polochka (electron-ion) = – " + EnsemblePolochka.EPSILON);
+            System.out.println("Polochka (electron-ion) = - " + EnsemblePolochka.EPSILON);
 
 //            if (line.hasOption("t")) {
 //                EnsemblePolochka.EPSILON = Double.parseDouble(line.getOptionValue("polka"));
 //            }
-            System.out.println("Polochka (electron-ion) = – " + EnsemblePolochka.EPSILON);
+//            System.out.println("Polochka (electron-ion) = – " + EnsemblePolochka.EPSILON);
 
             if (line.hasOption("w")) {
                 EnsembleController.NUM_THREADS = Integer.parseInt(line.getOptionValue("workers"));

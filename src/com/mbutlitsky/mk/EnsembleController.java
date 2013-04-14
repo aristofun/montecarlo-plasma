@@ -116,7 +116,7 @@ public class EnsembleController implements IEnsembleController {
         running = true;
 
         for (IEnsemble current : ensembles) {
-            sleep(rnd.nextInt(10, 150)); // some start time distribution to avoid clutter
+            sleep(rnd.nextInt(40, 120)); // some start time distribution to avoid clutter
             // thread pool filled
             pool.execute(current);
             states.put(current, new Boolean(true));
@@ -202,6 +202,7 @@ public class EnsembleController implements IEnsembleController {
 
         String energyes = getSimpleEnergiesString(current);
         System.out.println(current.getOptions().getFolder() + "\t#" + current.getCurrStep() +
+                " (" + 100 * current.getCurrStep()/current.getOptions().getNumSteps() + "%)" +
                 "\t" + energyes + "\t" + (running ? "" : " stop"));
     }
 
