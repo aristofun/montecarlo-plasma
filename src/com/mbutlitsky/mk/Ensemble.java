@@ -9,6 +9,7 @@ import java.nio.file.StandardOpenOption;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static com.mbutlitsky.mk.EnsembleController.getPath;
@@ -22,10 +23,11 @@ import static java.lang.Math.sqrt;
  * Time: 13:04
  */
 public abstract class Ensemble implements IEnsemble {
-    private static final int SAVE_CONFIG_INT = 401;
-    private static final int SAVE_CORR_INT = 1501;
-    private static final int CALC_CORR_INT = 611;
-    public static double DELTA_FACTOR = 1.1;
+    private static final int CALC_ENERGY_INT = 319;
+    private static final int SAVE_CONFIG_INT = 717;
+    private static final int SAVE_CORR_INT = 1901;
+    private static final int CALC_CORR_INT = 711;
+    public static double DELTA_FACTOR = 1.2;
     /**
      * overrides specific particle number in ini file if set in CLI options
      */
@@ -70,6 +72,9 @@ public abstract class Ensemble implements IEnsemble {
     private final double[] Ys;
     private final double[] Zs;
     private double energy;
+    // averaging energies values
+    private double[] energies = new double[5];
+    private double avgEnergy = 0;
 
 
     public Ensemble(EOptions options) {
@@ -105,10 +110,23 @@ public abstract class Ensemble implements IEnsemble {
         saveLongTail = ((options.getStrategy() & 1) == 1);
 
         loadFromStateFile();
-        resetEnergy();
+        initEnergy();
 
         applyAdditionalStrategies();
     }
+
+    /**
+     * sets average energy from file or resets it to zero
+     */
+    private void initEnergy() {
+        if (avgEnergy == 0) {
+            resetEnergy();
+            avgEnergy = energy;
+        }
+
+        Arrays.fill(energies, avgEnergy);
+    }
+
 
     private void applyAdditionalStrategies() {
         if (saveLongTail) {
@@ -178,6 +196,16 @@ public abstract class Ensemble implements IEnsemble {
     /**
      * calculates full system energy from scratch, based on current particles configuration
      */
+    private final void averageEnergy() {
+        energies[0] = energies[1];
+        energies[1] = energies[2];
+        energies[2] = energies[3];
+        energies[3] = energies[4];
+        energies[4] = energy;
+
+        avgEnergy = (energies[0] + energies[1] + energies[2] + energies[3] + energies[4]) / 5;
+    }
+
     private final void resetEnergy() {
         energy = 0;
         for (int i = 0; i < numPart; i++) {
@@ -264,7 +292,9 @@ public abstract class Ensemble implements IEnsemble {
     private void loadArrays(List<String> strings) throws Exception {
         // first line: curr_step energy
         String step_en = strings.remove(0);
+        // #step, average energy, ...
         currStep = Integer.parseInt(step_en.split("\\s+")[0]);
+        avgEnergy = Double.parseDouble(step_en.split("\\s+")[1]);
 
         if (strings.size() != numPart) {
             throw new Exception("file size doesn't fit particles number");
@@ -310,11 +340,15 @@ public abstract class Ensemble implements IEnsemble {
 
     public void saveState() {
         resetEnergy();
+        averageEnergy();
         // create strings list from arrays
         try {
             BufferedWriter writer = Files.newBufferedWriter(myConfigPath, Charset.defaultCharset());
 
-            writer.write("" + currStep + "\t" + SHORT_FORMAT.format(energy / numPart) + "\t"
+            writer.write("" + currStep + "\t"
+                    + FORMAT.format(avgEnergy) + "\t"
+                    + SHORT_FORMAT.format(avgEnergy / numPart) + "\t"
+                    + SHORT_FORMAT.format(energy / numPart) + "\t"
                     + SHORT_FORMAT.format(opt.getGamma()));
 
             writer.newLine();
@@ -345,7 +379,13 @@ public abstract class Ensemble implements IEnsemble {
      */
     @Override
     public void run() {
-        for (int i = currStep; i < numSteps; i++) {
+        if (currStep >= numSteps) {
+            System.out.println(myFolder + " already finished before! No run.");
+            finished = true;
+            return;
+        }
+
+        for (int i = currStep; i <= numSteps; i++) {
             if (finished) {
                 System.out.println("Exitting by stop " + myFolder + ", 'finished' found 'true'");
                 break;
@@ -353,6 +393,10 @@ public abstract class Ensemble implements IEnsemble {
 
             if (i % CALC_CORR_INT == 0) calcCorrelation();
             if (i % SAVE_CORR_INT == 0) saveCorrelation();
+//            if (i % CALC_ENERGY_INT == 0) {
+//                averageEnergy();
+//            }
+
             if (i % SAVE_CONFIG_INT == 0) {
                 saveState();
                 if (saveLongTail) saveLongTail();
@@ -363,10 +407,12 @@ public abstract class Ensemble implements IEnsemble {
         }
 
         finished = true;
+
         saveState();
+
         saveLongTail();
         closeLongTail();
-        System.out.println("Ensemble " + myFolder + " finished after " + numSteps + " steps.");
+        System.out.println("Ensemble " + myFolder + " finished after " + currStep + " steps.");
     }
 
     private void closeLongTail() {
@@ -502,8 +548,11 @@ public abstract class Ensemble implements IEnsemble {
     }
 
     @Override
+    /**
+     * Used only by external watchers! gives back averaged energy (by last 5 configurations).
+     */
     public double getEnergy() {
-        return energy;
+        return avgEnergy;
     }
 
     @Override
@@ -516,9 +565,25 @@ public abstract class Ensemble implements IEnsemble {
         return finished;
     }
 
+
     @Override
-    public final EOptions getOptions() {
-        return opt;
+    public int getNumPart() {
+        return numPart;
+    }
+
+    @Override
+    public int getT() {
+        return T;
+    }
+
+    @Override
+    public String getFolder() {
+        return myFolder;
+    }
+
+    @Override
+    public int getNumSteps() {
+        return numSteps;
     }
 
     @Override

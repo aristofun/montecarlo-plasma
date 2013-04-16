@@ -35,8 +35,13 @@ public interface IEnsemble extends Runnable {
 
     double getPressure();
 
-    EOptions getOptions();
+    int getNumPart();
 
+    int getNumSteps();
+
+    int getT();
+
+    String getFolder();
     /**
      * returns true if this ensemble is not being executed anymore
      */

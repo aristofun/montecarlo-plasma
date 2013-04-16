@@ -15,8 +15,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import static java.lang.Thread.sleep;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aristofun
  * Date: 02.03.13
  * Time: 19:07
  */
@@ -24,14 +22,14 @@ public class EnsembleController implements IEnsembleController {
     /**
      * how often check child ensembles & display status on console
      */
-    public static int REFRESH_DELAY = 30000;
+    public static int REFRESH_DELAY = 7000;
 
     /**
      * may be overriden by CLI options, if zero – max(2, CPUs/2) used
      */
     public static int NUM_THREADS = 0;
 
-    private static final int SAVE_ENERGIES_INT = 17;
+    private static final int DRAW_STATUS_INT = 5;
     private volatile boolean running = true;
 
     private static final String CONFIG_FILE = "mk_config.ini";
@@ -129,9 +127,12 @@ public class EnsembleController implements IEnsembleController {
 
         while (running) {
             sleep(REFRESH_DELAY);
-            drawStatus();
+
             // heavy status reports (saving energies & plots)
-            if (i % SAVE_ENERGIES_INT == 0) saveEnergies();
+            if (i % DRAW_STATUS_INT == 0) drawStatus();
+            if (i % (DRAW_STATUS_INT * 5) == 0) saveEnergies();
+
+            refreshStatus();
             i++;
         }
 
@@ -141,16 +142,31 @@ public class EnsembleController implements IEnsembleController {
         System.out.println("Thread pool shutted down.");
     }
 
+    private void refreshStatus() {
+        // main ensembles refresh loop
+        for (IEnsemble current : ensembles) {
+//            refreshEnergy(current);
+            refreshStates(current);
+        }
+        stopIfFinished();
+    }
+
     private void drawStatus() {
+        for (IEnsemble current : ensembles) {
+            refreshEnergy(current);
+        }
+
         System.out.println("\n\n"); // clear screen
+        System.out.println("Polochka: -" + EnsemblePolochka.EPSILON
+                + ", delta: " + Ensemble.DELTA_FACTOR + ", refresh: "
+                + EnsembleController.REFRESH_DELAY / 1000 + ", workers: "
+                + EnsembleController.NUM_THREADS);
+        System.out.println("---------------------------------------------------------");
 
         // main ensembles refresh loop
         for (IEnsemble current : ensembles) {
-            refreshEnergy(current);
-            refreshStates(current);
+            drawEnergy(current);
         }
-
-        stopIfFinished();
     }
 
     /**
@@ -168,6 +184,7 @@ public class EnsembleController implements IEnsembleController {
 
                 for (IEnsemble ens : iEnsembles) {
                     final List enrgs = getEnergies(ens);
+
                     writer.write(FULL_FORMAT.format(enrgs.get(enrgs.size() - 1)));
                     writer.newLine();
                 }
@@ -192,33 +209,32 @@ public class EnsembleController implements IEnsembleController {
         states.put(current, new Boolean(!current.isFinished())); // true == running thread
     }
 
-    private void refreshEnergy(IEnsemble current) {
-        boolean running = states.get(current).booleanValue();
-        if (running) {
-            List<Double> enrgy = getEnergies(current); // we got list of energies for given ensemble
-            enrgy.add(new Double(current.getEnergy() / current.getOptions().getNumParticles()));
-            if (enrgy.size() > 5) enrgy.remove(0);
-        }
-
+    private void drawEnergy(IEnsemble current) {
+        boolean currentRunning = states.get(current).booleanValue();
         String energyes = getSimpleEnergiesString(current);
-        System.out.println(current.getOptions().getFolder() + "\t#" + current.getCurrStep() +
-                " (" + 100 * current.getCurrStep()/current.getOptions().getNumSteps() + "%)" +
-                "\t" + energyes + "\t" + (running ? "" : " stop"));
+        System.out.println(current.getFolder() + "\t#" + current.getCurrStep() +
+                " (" + 100 * (current.getCurrStep() + 1) / current.getNumSteps() + "%)" +
+                "\t[" + energyes + "]\t" + (currentRunning ? "" : " finished"));
+    }
+
+    private void refreshEnergy(IEnsemble current) {
+        List<Double> enrgy = getEnergies(current); // we got list of energies for given ensemble
+        enrgy.add(new Double(current.getEnergy() / current.getNumPart()));
+        if (enrgy.size() > 5) enrgy.remove(0);
     }
 
     private String getSimpleEnergiesString(IEnsemble current) {
         List enrgs = getEnergies(current);
         StringBuilder out = new StringBuilder();
-        out.append("\t");
         for (Object o : enrgs) {
             out.append(SHORT_FORMAT.format(o));
-            out.append("\t");
+            out.append(",  ");
         }
         return out.toString();
     }
 
     private final List<Double> getEnergies(IEnsemble current) {
-        return enrgValues.get(current.getOptions().getT()).get(current);
+        return enrgValues.get(current.getT()).get(current);
     }
 
 //    public void saveContinueOptions() throws IOException {

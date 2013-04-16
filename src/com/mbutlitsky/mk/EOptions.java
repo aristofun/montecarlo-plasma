@@ -22,7 +22,7 @@ public class EOptions implements CharSequence {
     private final NumberFormat MICRO_FORMAT = new DecimalFormat("0.##E0");
     private final double density;
     private final double maxDelta;
-    private int numParticles;
+    private final int numParticles;
     private final int numSteps;
 
     /** STRATEGY bits 0 – default, 1 – save longtail */
@@ -59,7 +59,7 @@ public class EOptions implements CharSequence {
         return maxDelta;
     }
 
-    public int getNumParticles() {
+    public final int getNumParticles() {
         return numParticles;
     }
 
@@ -136,7 +136,4 @@ public class EOptions implements CharSequence {
         return gamma;
     }
 
-    public void setNumParticles(int parts) {
-        numParticles = parts;
-    }
 }

@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "0.5";
+    public static final String version = "0.6";
 
     /**
      * <pre>usage: (./runmk.command | runmk.bat) [OPTIONS]
@@ -37,7 +37,7 @@ public class Main {
                 public void run() {
                     controller.stop();
                     try {
-                        Thread.sleep(EnsembleController.REFRESH_DELAY / 10);
+                        Thread.sleep(EnsembleController.REFRESH_DELAY);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -76,10 +76,10 @@ public class Main {
                 .create("pa");
 
         Option delta = OptionBuilder.withArgName("DELTA_FACTOR").hasArg()
-                .withDescription("maxDx coeff. (1.1 default)").withLongOpt("delta").create("d");
+                .withDescription("maxDx coeff. (1.2 default)").withLongOpt("delta").create("d");
 
         Option refresh = OptionBuilder.withArgName("SECONDS").hasArg()
-                .withDescription("threads status refresh interval (30 sec. default)")
+                .withDescription("threads status refresh interval (7 sec. default)")
                 .withLongOpt("refresh").create("r");
 
 
