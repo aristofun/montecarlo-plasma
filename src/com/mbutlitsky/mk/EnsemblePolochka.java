@@ -7,14 +7,17 @@ package com.mbutlitsky.mk;
  * Time: 17:19
  */
 public class EnsemblePolochka extends Ensemble {
-    /** polochka deepness in kT */
-    public static double EPSILON = 2.0;
+    /**
+     * polochka deepness in kT
+     */
+    public static double EPSILON = 199.0;
 
     private final double myEpsilon;
 
     public EnsemblePolochka(EOptions options) {
         super(options);
         myEpsilon = EPSILON;
+        initialize();
     }
 
     @Override
@@ -30,7 +33,7 @@ public class EnsemblePolochka extends Ensemble {
 
         if (attraction)   // ion-electron
         {
-            if (r < (315775.01611746440408 / (T * myEpsilon )))
+            if (r < (315775.01611746440408 / (T * myEpsilon)))
                 return -1 * myEpsilon; // temperature;
             else {
                 return (-1 * 315775.01611746440408 / (T * r));

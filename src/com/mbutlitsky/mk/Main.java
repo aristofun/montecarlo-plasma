@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "0.6";
+    public static final String version = "0.7";
 
     /**
      * <pre>usage: (./runmk.command | runmk.bat) [OPTIONS]
@@ -20,6 +20,7 @@ public class Main {
      * </pre>
      */
     public static void main(String[] args) {
+
         Date start = new Date();
         System.out.println("\nMonte-Karlo game v. " + version + ", (c) Michael Butlitsky 2013\n");
 

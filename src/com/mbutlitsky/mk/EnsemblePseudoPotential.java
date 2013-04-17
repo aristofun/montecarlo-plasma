@@ -15,6 +15,7 @@ public class EnsemblePseudoPotential extends Ensemble {
 
     public EnsemblePseudoPotential(EOptions options) {
         super(options);
+        initialize();
     }
 
     @Override

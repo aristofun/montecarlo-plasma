@@ -130,7 +130,7 @@ public class EnsembleController implements IEnsembleController {
 
             // heavy status reports (saving energies & plots)
             if (i % DRAW_STATUS_INT == 0) drawStatus();
-            if (i % (DRAW_STATUS_INT * 5) == 0) saveEnergies();
+            if (i % (DRAW_STATUS_INT * 7) == 0) saveEnergies();
 
             refreshStatus();
             i++;

@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.mbutlitsky.mk.EnsembleController.getPath;
+import static java.lang.Math.abs;
 import static java.lang.Math.pow;
 import static java.lang.Math.sqrt;
 
@@ -24,9 +25,9 @@ import static java.lang.Math.sqrt;
  */
 public abstract class Ensemble implements IEnsemble {
     private static final int CALC_ENERGY_INT = 319;
-    private static final int SAVE_CONFIG_INT = 717;
-    private static final int SAVE_CORR_INT = 1901;
-    private static final int CALC_CORR_INT = 711;
+    private static final int SAVE_CONFIG_INT = 917;
+    private static final int SAVE_CORR_INT = 1971;
+    private static final int CALC_CORR_INT = 451;
     public static double DELTA_FACTOR = 1.2;
     /**
      * overrides specific particle number in ini file if set in CLI options
@@ -71,7 +72,7 @@ public abstract class Ensemble implements IEnsemble {
     private final double[] Xs;
     private final double[] Ys;
     private final double[] Zs;
-    private double energy;
+    private double energy = 0;
     // averaging energies values
     private double[] energies = new double[5];
     private double avgEnergy = 0;
@@ -108,19 +109,24 @@ public abstract class Ensemble implements IEnsemble {
 
         // OPTIONS first bit == save longtail
         saveLongTail = ((options.getStrategy() & 1) == 1);
+    }
 
+    /**
+     * Must be run by children after super constructor. Default strategy – set up initial state from file
+     * or random if failed to read config from disk.
+     */
+    protected void initialize() {
         loadFromStateFile();
         initEnergy();
 
         applyAdditionalStrategies();
     }
-
     /**
      * sets average energy from file or resets it to zero
      */
     private void initEnergy() {
+        resetEnergy();
         if (avgEnergy == 0) {
-            resetEnergy();
             avgEnergy = energy;
         }
 
@@ -207,12 +213,18 @@ public abstract class Ensemble implements IEnsemble {
     }
 
     private final void resetEnergy() {
-        energy = 0;
+        double newEn = 0;
+//        energy = 0;
         for (int i = 0; i < numPart; i++) {
             for (int j = i + 1; j < numPart; j++) {
-                energy += getPotential(i, j);
+                newEn = newEn + getPotential(i, j);
             }
         }
+
+        if (abs(newEn - energy) > abs(energy * 0.0000001))
+            System.out.println("ACHTUNG! new - old == " + (newEn - energy) + ", step: " + currStep
+                    + ", " + myFolder + ", energy: " + energy + ", newEn: " + newEn);
+        energy = newEn;
     }
 
     /**
@@ -259,7 +271,7 @@ public abstract class Ensemble implements IEnsemble {
     }
 
     private final double dSquared(double dx) {
-        dx = Math.abs(dx);
+        dx = abs(dx);
         return (dx > halfBox) ? (halfBox - dx % halfBox) : dx;
     }
 
@@ -391,18 +403,19 @@ public abstract class Ensemble implements IEnsemble {
                 break;
             }
 
+            play();
+
             if (i % CALC_CORR_INT == 0) calcCorrelation();
             if (i % SAVE_CORR_INT == 0) saveCorrelation();
-//            if (i % CALC_ENERGY_INT == 0) {
-//                averageEnergy();
-//            }
+            if (i % CALC_ENERGY_INT == 0) {
+                averageEnergy();
+            }
 
             if (i % SAVE_CONFIG_INT == 0) {
                 saveState();
                 if (saveLongTail) saveLongTail();
             }
 
-            play();
             currStep = i;
         }
 
@@ -499,7 +512,7 @@ public abstract class Ensemble implements IEnsemble {
         Xs[which] = xTrial;
         Ys[which] = yTrial;
         Zs[which] = zTrial;
-        energy += deltaE;
+        energy = energy + deltaE;
     }
 
     /**
@@ -521,12 +534,12 @@ public abstract class Ensemble implements IEnsemble {
 
         // firstly, old Energy
         for (int i = 0; i < numPart; i++) {
-            oldE += getPotential(i, which);
+            oldE = oldE + getPotential(i, which);
         }
 
         // then, new Energy
         for (int i = 0; i < numPart; i++) {
-            newE += getPotential(i, which, xTrial, yTrial, zTrial);
+            newE = newE + getPotential(i, which, xTrial, yTrial, zTrial);
         }
         return newE - oldE;
     }
