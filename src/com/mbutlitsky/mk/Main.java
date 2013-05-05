@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "0.7";
+    public static final String version = "0.8";
 
     /**
      * <pre>usage: (./runmk.command | runmk.bat) [OPTIONS]

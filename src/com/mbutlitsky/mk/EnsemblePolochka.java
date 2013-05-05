@@ -10,7 +10,7 @@ public class EnsemblePolochka extends Ensemble {
     /**
      * polochka deepness in kT
      */
-    public static double EPSILON = 199.0;
+    public static double EPSILON = 4.0;
 
     private final double myEpsilon;
 

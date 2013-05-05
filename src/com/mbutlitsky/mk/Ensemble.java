@@ -13,9 +13,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.mbutlitsky.mk.EnsembleController.getPath;
-import static java.lang.Math.abs;
-import static java.lang.Math.pow;
-import static java.lang.Math.sqrt;
+import static java.lang.Math.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -24,10 +22,13 @@ import static java.lang.Math.sqrt;
  * Time: 13:04
  */
 public abstract class Ensemble implements IEnsemble {
-    private static final int CALC_ENERGY_INT = 319;
-    private static final int SAVE_CONFIG_INT = 917;
-    private static final int SAVE_CORR_INT = 1971;
-    private static final int CALC_CORR_INT = 451;
+    private static final int CALC_ENERGY_INT = 117; // make less for big num part
+//    private static final int CALC_ENERGY_INT = 419; // make less for big num part
+    private static final int SAVE_CONFIG_INT = 239; // make less for big num part
+//    private static final int SAVE_CONFIG_INT = 1117; // make less for big num part
+
+    private static final int SAVE_CORR_INT = 1979;
+    private static final int CALC_CORR_INT = 489;
     public static double DELTA_FACTOR = 1.2;
     /**
      * overrides specific particle number in ini file if set in CLI options
@@ -121,6 +122,7 @@ public abstract class Ensemble implements IEnsemble {
 
         applyAdditionalStrategies();
     }
+
     /**
      * sets average energy from file or resets it to zero
      */
@@ -176,8 +178,7 @@ public abstract class Ensemble implements IEnsemble {
                 }
             } else {
                 opt.setOld(false);
-                System.out.println("WARNING: initial config not found for " + myFolder + ", " +
-                        "starting from scratch");
+                System.out.print("! from scratch: " + myFolder + "\t ");
             }
         }
 
@@ -221,9 +222,9 @@ public abstract class Ensemble implements IEnsemble {
             }
         }
 
-        if (abs(newEn - energy) > abs(energy * 0.0000001))
-            System.out.println("ACHTUNG! new - old == " + (newEn - energy) + ", step: " + currStep
-                    + ", " + myFolder + ", energy: " + energy + ", newEn: " + newEn);
+//        if (abs(newEn - energy) > abs(energy * 0.0000001))
+//            System.out.println("ACHTUNG! new - old == " + (newEn - energy) + ", step: " + currStep
+//                    + ", " + myFolder + ", energy: " + energy + ", newEn: " + newEn);
         energy = newEn;
     }
 
@@ -391,8 +392,9 @@ public abstract class Ensemble implements IEnsemble {
      */
     @Override
     public void run() {
+        System.out.println();
         if (currStep >= numSteps) {
-            System.out.println(myFolder + " already finished before! No run.");
+            System.out.print(myFolder + " No run.\t");
             finished = true;
             return;
         }
