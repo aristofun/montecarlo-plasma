@@ -22,13 +22,13 @@ import static java.lang.Math.*;
  * Time: 13:04
  */
 public abstract class Ensemble implements IEnsemble {
-    private static final int CALC_ENERGY_INT = 117; // make less for big num part
+    private static final int CALC_ENERGY_INT = 237; // make less for big num part
 //    private static final int CALC_ENERGY_INT = 419; // make less for big num part
-    private static final int SAVE_CONFIG_INT = 239; // make less for big num part
+    private static final int SAVE_CONFIG_INT = 531; // make less for big num part
 //    private static final int SAVE_CONFIG_INT = 1117; // make less for big num part
 
-    private static final int SAVE_CORR_INT = 1979;
-    private static final int CALC_CORR_INT = 489;
+    private static final int SAVE_CORR_INT = 1579;
+    private static final int CALC_CORR_INT = 711;
     public static double DELTA_FACTOR = 1.2;
     /**
      * overrides specific particle number in ini file if set in CLI options

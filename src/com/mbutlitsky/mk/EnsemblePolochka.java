@@ -34,7 +34,7 @@ public class EnsemblePolochka extends Ensemble {
         if (attraction)   // ion-electron
         {
             if (r < (315775.01611746440408 / (T * myEpsilon)))
-                return -1 * myEpsilon; // temperature;
+                return 0; // -1 * myEpsilon – constant potential makes zero contribution to Energy
             else {
                 return (-1 * 315775.01611746440408 / (T * r));
             }
