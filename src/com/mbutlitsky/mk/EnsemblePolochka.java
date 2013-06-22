@@ -1,7 +1,6 @@
 package com.mbutlitsky.mk;
 
 /**
- * Created with IntelliJ IDEA.
  * User: aristofun
  * Date: 02.03.13
  * Time: 17:19
@@ -34,7 +33,7 @@ public class EnsemblePolochka extends Ensemble {
         if (attraction)   // ion-electron
         {
             if (r < (315775.01611746440408 / (T * myEpsilon)))
-                return 0; // -1 * myEpsilon – constant potential makes zero contribution to Energy
+                return (-1 * myEpsilon); //
             else {
                 return (-1 * 315775.01611746440408 / (T * r));
             }
@@ -44,6 +43,16 @@ public class EnsemblePolochka extends Ensemble {
             else
                 // The hard-coded Coloumb energy, always the same.
                 return (315775.01611746440408 / (T * r));
+        }
+    }
+
+    @Override
+    protected final double getEnergy(double r, boolean attraction) {
+        // – constant potential makes zero contribution to Energy
+        if (attraction && (r < (315775.01611746440408 / (T * myEpsilon)))) {
+            return 0;
+        } else {
+            return getPotential(r, attraction);
         }
     }
 }

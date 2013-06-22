@@ -8,32 +8,40 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Deque;
 import java.util.List;
 
 import static com.mbutlitsky.mk.EnsembleController.getPath;
 import static java.lang.Math.*;
 
 /**
- * Created with IntelliJ IDEA.
+ * total num steps usually
+ * 5 mln (500 particles x 10000 steps) to 10 mln (1000 particles x 10000 stps).
+ * <p/>
  * User: aristofun
  * Date: 03.03.13
  * Time: 13:04
  */
 public abstract class Ensemble implements IEnsemble {
-    private static final int CALC_ENERGY_INT = 237; // make less for big num part
-//    private static final int CALC_ENERGY_INT = 419; // make less for big num part
-    private static final int SAVE_CONFIG_INT = 531; // make less for big num part
-//    private static final int SAVE_CONFIG_INT = 1117; // make less for big num part
 
-    private static final int SAVE_CORR_INT = 1579;
-    private static final int CALC_CORR_INT = 711;
-    public static double DELTA_FACTOR = 1.2;
+    //    private static final int CALC_ENERGY_INT = 72073; // make less for big num part
+    private static final int SAVE_CONFIG_N_CORR_INT = 524287; // make less for big num part
+    private static final int CALC_CORR_INT = 361275;
+
+    private static final int SAVE_ENERGY_INT = 84631;
+    private static final int CALC_ENERGY_INT = 12251;
+
+    public static double DELTA_FACTOR = 1.5;
     /**
      * overrides specific particle number in ini file if set in CLI options
      */
     public static int DEFAULT_NUM_PARTICLES = 0;
+    /**
+     * overrides number of steps for all ensembles
+     */
+    public static int DEFAULT_NUM_STEPS = -1;
 
     private final NumberFormat FORMAT = new DecimalFormat(EOptions.SCIENTIFIC_FORMAT_STR);
     private final NumberFormat SHORT_FORMAT = new DecimalFormat(EOptions.SHORT_FORMAT_STR);
@@ -73,9 +81,13 @@ public abstract class Ensemble implements IEnsemble {
     private final double[] Xs;
     private final double[] Ys;
     private final double[] Zs;
+
+    private double potential = 0;
     private double energy = 0;
-    // averaging energies values
-    private double[] energies = new double[5];
+
+    private static int NUM_ENERGY_AVG_POINTS = 64;
+    // averaging energies values stack
+    private Deque<Double> energies = new ArrayDeque<Double>(NUM_ENERGY_AVG_POINTS);
     private double avgEnergy = 0;
 
 
@@ -90,7 +102,7 @@ public abstract class Ensemble implements IEnsemble {
         maxDelta = (opt.getMaxDelta() == 0.0) ? DELTA_FACTOR * avgDistance : opt.getMaxDelta();
 
         numPart = (DEFAULT_NUM_PARTICLES == 0) ? opt.getNumParticles() : DEFAULT_NUM_PARTICLES;
-        numSteps = opt.getNumSteps();
+        numSteps = (DEFAULT_NUM_STEPS < 0) ? opt.getNumSteps() * numPart : DEFAULT_NUM_STEPS * numPart;
         T = opt.getT();
         myFolder = opt.getFolder();
 
@@ -124,15 +136,13 @@ public abstract class Ensemble implements IEnsemble {
     }
 
     /**
-     * sets average energy from file or resets it to zero
+     * sets average potential from file or resets it to zero
      */
     private void initEnergy() {
-        resetEnergy();
+        resetPotential();
         if (avgEnergy == 0) {
-            avgEnergy = energy;
+            averageEnergy();
         }
-
-        Arrays.fill(energies, avgEnergy);
     }
 
 
@@ -200,31 +210,53 @@ public abstract class Ensemble implements IEnsemble {
         }
     }
 
-    /**
-     * calculates full system energy from scratch, based on current particles configuration
-     */
-    private final void averageEnergy() {
-        energies[0] = energies[1];
-        energies[1] = energies[2];
-        energies[2] = energies[3];
-        energies[3] = energies[4];
-        energies[4] = energy;
 
-        avgEnergy = (energies[0] + energies[1] + energies[2] + energies[3] + energies[4]) / 5;
+    /**
+     * Record current energy value to averager array
+     */
+    private final void currentEnergy() {
+        resetEnergy();
+        energies.addFirst(energy);
+        if (energies.size() > 63) energies.pollLast();
     }
 
-    private final void resetEnergy() {
+    /**
+     * calculates full system potential from scratch, based on current particles configuration
+     */
+    private final void averageEnergy() {
+        currentEnergy();
+
+        double enrg = 0.0;
+
+        for (Double val : energies) {
+            enrg = enrg + val;
+        }
+
+        avgEnergy = enrg / energies.size();
+    }
+
+    private final void resetPotential() {
         double newEn = 0;
-//        energy = 0;
         for (int i = 0; i < numPart; i++) {
             for (int j = i + 1; j < numPart; j++) {
                 newEn = newEn + getPotential(i, j);
             }
         }
 
-//        if (abs(newEn - energy) > abs(energy * 0.0000001))
-//            System.out.println("ACHTUNG! new - old == " + (newEn - energy) + ", step: " + currStep
-//                    + ", " + myFolder + ", energy: " + energy + ", newEn: " + newEn);
+        potential = newEn;
+    }
+
+    private final void resetEnergy() {
+        double newEn = 0;
+        for (int i = 0; i < numPart; i++) {
+            for (int j = i + 1; j < numPart; j++) {
+                newEn = newEn + getEnergy(i, j);
+            }
+        }
+
+//        if (abs(newEn - potential) > abs(potential * 0.0000001))
+//            System.out.println("ACHTUNG! new - old == " + (newEn - potential) + ", step: " + currStep
+//                    + ", " + myFolder + ", potential: " + potential + ", newEn: " + newEn);
         energy = newEn;
     }
 
@@ -255,7 +287,7 @@ public abstract class Ensemble implements IEnsemble {
     }
 
     /**
-     * returns current energy between to particles defined by i,j indexes
+     * returns current potential between to particles defined by i,j indexes
      * if i == j returns 0
      */
     private final double getPotential(int i, int j) {
@@ -263,6 +295,29 @@ public abstract class Ensemble implements IEnsemble {
     }
 
     protected abstract double getPotential(double r, boolean attraction);
+
+    private final double getEnergy(int i, int j) {
+        final double r = sqrt(dSquared(Xs[j] - Xs[i], Ys[j] - Ys[i], Zs[j] - Zs[i]));
+
+        if (i != j) {
+            if (j < (numPart / 2))   // First _num/2 are IONS
+            {
+                if (i < (numPart / 2)) // ION-ION
+                    return getEnergy(r, false);
+                else              // ION - electron
+                    return getEnergy(r, true);
+            } else                   // Last _num/2 are Electrons
+            {
+                if (i < (numPart / 2)) // Electron - ION
+                    return getEnergy(r, true);
+                else              // Electron - Electron
+                    return getEnergy(r, false);
+            }
+        }
+        return 0;
+    }
+
+    protected abstract double getEnergy(double r, boolean attraction);
 
     public final double dSquared(double dx, double dy, double dz) {
         dx = dSquared(dx);
@@ -303,9 +358,9 @@ public abstract class Ensemble implements IEnsemble {
      * throws IOException if no valid config could be read
      */
     private void loadArrays(List<String> strings) throws Exception {
-        // first line: curr_step energy
+        // first line: curr_step potential
         String step_en = strings.remove(0);
-        // #step, average energy, ...
+        // #step, average potential, ...
         currStep = Integer.parseInt(step_en.split("\\s+")[0]);
         avgEnergy = Double.parseDouble(step_en.split("\\s+")[1]);
 
@@ -352,8 +407,8 @@ public abstract class Ensemble implements IEnsemble {
     }
 
     public void saveState() {
-        resetEnergy();
         averageEnergy();
+
         // create strings list from arrays
         try {
             BufferedWriter writer = Files.newBufferedWriter(myConfigPath, Charset.defaultCharset());
@@ -399,25 +454,32 @@ public abstract class Ensemble implements IEnsemble {
             return;
         }
 
-        for (int i = currStep; i <= numSteps; i++) {
+
+        int i = currStep;
+
+        while (i < numSteps) {
+
             if (finished) {
-                System.out.println("Exitting by stop " + myFolder + ", 'finished' found 'true'");
+                System.out.print("STOP " + myFolder + ", finished=true\t");
                 break;
             }
 
             play();
 
             if (i % CALC_CORR_INT == 0) calcCorrelation();
-            if (i % SAVE_CORR_INT == 0) saveCorrelation();
-            if (i % CALC_ENERGY_INT == 0) {
-                averageEnergy();
-            }
+            if (i % CALC_ENERGY_INT == 0) currentEnergy();
 
-            if (i % SAVE_CONFIG_INT == 0) {
+            if (i % SAVE_ENERGY_INT == 0) averageEnergy();
+
+            if (i % SAVE_CONFIG_N_CORR_INT == 0) {
+                saveCorrelation();
                 saveState();
                 if (saveLongTail) saveLongTail();
+
+                //resetPotential(); // TODO: may be removed, just in case for cleaning up potential
             }
 
+            i++;
             currStep = i;
         }
 
@@ -427,7 +489,7 @@ public abstract class Ensemble implements IEnsemble {
 
         saveLongTail();
         closeLongTail();
-        System.out.println("Ensemble " + myFolder + " finished after " + currStep + " steps.");
+        System.out.print("" + myFolder + " finished on " + currStep + " steps.\t");
     }
 
     private void closeLongTail() {
@@ -488,37 +550,37 @@ public abstract class Ensemble implements IEnsemble {
     }
 
     /**
-     * performs one act of monte-karlo play randomly moves each particle and saves the state
+     * performs one act of monte-karlo play randomly moves one particle and saves the state
      * with some probability
      */
     private final void play() {
-        for (int j = 0; j < numPart; j++) {
-            // move random particle
-            final double deltaE = moveParticle();
-            // transition probability checking
-            // energy increased
-            if (deltaE > 0) {
-                // compare the transition probability with random
-                // All energies are in kT
-                if (Math.exp(-deltaE) >= myRandom(1.0))   // accept movement
-                    acceptTrial(deltaE);
-
-                // energy decreased, accept configuration
-            } else {
+//        for (int j = 0; j < numPart; j++) {
+        // move random particle
+        final double deltaE = moveParticle();
+        // transition probability checking
+        // potential increased
+        if (deltaE > 0) {
+            // compare the transition probability with random
+            // All energies are in kT
+            if (Math.exp(-deltaE) >= myRandom(1.0))   // accept movement
                 acceptTrial(deltaE);
-            }
+
+            // potential decreased, accept configuration
+        } else {
+            acceptTrial(deltaE);
         }
+//        }
     }
 
     private final void acceptTrial(double deltaE) {
         Xs[which] = xTrial;
         Ys[which] = yTrial;
         Zs[which] = zTrial;
-        energy = energy + deltaE;
+        potential = potential + deltaE;
     }
 
     /**
-     * returns trial energy shift for moved particle
+     * returns trial potential shift for moved particle
      */
     private final double moveParticle() {
         final double x = myRandom() * maxDelta;
@@ -531,7 +593,7 @@ public abstract class Ensemble implements IEnsemble {
         yTrial = correctPosition(Ys[which] + y);
         zTrial = correctPosition(Zs[which] + z);
 
-        // Calculating the energy shift
+        // Calculating the potential shift
         double oldE = 0, newE = 0;
 
         // firstly, old Energy
@@ -564,16 +626,12 @@ public abstract class Ensemble implements IEnsemble {
 
     @Override
     /**
-     * Used only by external watchers! gives back averaged energy (by last 5 configurations).
+     * Used only by external watchers! gives back averaged potential (by last 5 configurations).
      */
     public double getEnergy() {
         return avgEnergy;
     }
 
-    @Override
-    public double getPressure() {
-        return 0;
-    }
 
     @Override
     public final boolean isFinished() {

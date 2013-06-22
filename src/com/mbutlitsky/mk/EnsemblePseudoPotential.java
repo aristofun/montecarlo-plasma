@@ -47,8 +47,12 @@ public class EnsemblePseudoPotential extends Ensemble {
         }
     }
 
-    private abstract class PseudoDelegate {
-        abstract double pseudo(double x);
+    @Override
+    protected double getEnergy(double r, boolean attraction) {
+        return getPotential(r, attraction);
     }
-//    TODO: add pseudo delegates factory
+
+//    private abstract class PseudoDelegate {
+//        abstract double pseudo(double x);
+//    }
 }

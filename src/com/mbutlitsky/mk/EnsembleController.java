@@ -22,14 +22,14 @@ public class EnsembleController implements IEnsembleController {
     /**
      * how often check child ensembles & display status on console
      */
-    public static int REFRESH_DELAY = 10000;
+    public static int REFRESH_DELAY = 20000;
 
     /**
      * may be overriden by CLI options, if zero – max(2, CPUs/2) used
      */
     public static int NUM_THREADS = 0;
 
-    private static final int DRAW_STATUS_INT = 5;
+    private static final int DRAW_STATUS_INT = 3;
     private volatile boolean running = true;
 
     private static final String CONFIG_FILE = "mk_config.ini";
@@ -38,13 +38,10 @@ public class EnsembleController implements IEnsembleController {
 
     private final List<IEnsemble> ensembles = new ArrayList<IEnsemble>();
 
-    // TODO: remove this rudiment
-//    private final List<EOptions> continueOpts = new ArrayList<EOptions>();
-
     //    private Map<IEnsemble, List> energies = new HashMap();
     private final Map<IEnsemble, Boolean> states = new HashMap<IEnsemble, Boolean>();
-    private final Map<Integer, Map<IEnsemble, List<Double>>> enrgValues = new HashMap<Integer,
-            Map<IEnsemble, List<Double>>>();
+    private final Map<Integer, Map<IEnsemble, Deque<Double>>> enrgValues =
+            new HashMap<Integer, Map<IEnsemble, Deque<Double>>>();
 
 
     private final ExecutorService pool;
@@ -73,19 +70,17 @@ public class EnsembleController implements IEnsembleController {
         // setting main ensembles Lists
         for (EOptions opt : options) {
             IEnsemble ens = new EnsemblePolochka(opt);
-//            IEnsemble ens = new EnsemblePseudoPotential(opt);
+            //            IEnsemble ens = new EnsemblePseudoPotential(opt);
             ensembles.add(ens);
             // additional config for continues
             opt.setOld(true);
 
-//            continueOpts.add(opt); HZ
-
             // fill mapping T -> ensembles list
             if (enrgValues.get(opt.getT()) == null) {
-                enrgValues.put(opt.getT(), new LinkedHashMap<IEnsemble, List<Double>>());
+                enrgValues.put(opt.getT(), new LinkedHashMap<IEnsemble, Deque<Double>>());
             }
 
-            enrgValues.get(opt.getT()).put(ens, new ArrayList<Double>(6));
+            enrgValues.get(opt.getT()).put(ens, new ArrayDeque<Double>(6));
         }
 
         System.out.println("\n");
@@ -122,7 +117,7 @@ public class EnsembleController implements IEnsembleController {
 
         System.out.println("Ensembles started and running:");
 
-        int i = 0;
+        int i = 1;
         drawStatus();
 
         while (running) {
@@ -130,12 +125,13 @@ public class EnsembleController implements IEnsembleController {
 
             // heavy status reports (saving energies & plots)
             if (i % DRAW_STATUS_INT == 0) drawStatus();
-            if (i % (DRAW_STATUS_INT * 7) == 0) saveEnergies();
+            if (i % (DRAW_STATUS_INT * 2) == 0) saveEnergies();
 
             refreshStatus();
             i++;
         }
 
+        drawStatus();
         saveEnergies();
         System.out.println("Controller (" + ensembles.size() + " points) finished.");
         pool.shutdown();
@@ -183,9 +179,9 @@ public class EnsembleController implements IEnsembleController {
                 writer.newLine();
 
                 for (IEnsemble ens : iEnsembles) {
-                    final List enrgs = getEnergies(ens);
+                    final Deque<Double> enrgs = getEnergies(ens);
 
-                    writer.write(FULL_FORMAT.format(enrgs.get(enrgs.size() - 1)));
+                    writer.write(FULL_FORMAT.format(enrgs.peekLast()));
                     writer.newLine();
                 }
                 writer.close();
@@ -218,14 +214,15 @@ public class EnsembleController implements IEnsembleController {
     }
 
     private void refreshEnergy(IEnsemble current) {
-        List<Double> enrgy = getEnergies(current); // we got list of energies for given ensemble
-        enrgy.add(new Double(current.getEnergy() / current.getNumPart()));
-        if (enrgy.size() > 5) enrgy.remove(0);
+        Deque<Double> enrgy = getEnergies(current); // we got list of energies for given ensemble
+        enrgy.addLast(current.getEnergy() / current.getNumPart());
+        if (enrgy.size() > 5) enrgy.pollFirst();
     }
 
     private String getSimpleEnergiesString(IEnsemble current) {
-        List enrgs = getEnergies(current);
+        Deque enrgs = getEnergies(current);
         StringBuilder out = new StringBuilder();
+
         for (Object o : enrgs) {
             out.append(SHORT_FORMAT.format(o));
             out.append(",  ");
@@ -233,7 +230,7 @@ public class EnsembleController implements IEnsembleController {
         return out.toString();
     }
 
-    private final List<Double> getEnergies(IEnsemble current) {
+    private final Deque<Double> getEnergies(IEnsemble current) {
         return enrgValues.get(current.getT()).get(current);
     }
 

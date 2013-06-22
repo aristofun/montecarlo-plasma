@@ -2,18 +2,21 @@ package com.mbutlitsky.mk;
 
 import org.apache.commons.cli.*;
 
+import java.util.ArrayDeque;
 import java.util.Date;
+import java.util.Deque;
 import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "1.0";
+    public static final String version = "2.0";
 
     /**
      * <pre>usage: (./runmk.command | runmk.bat) [OPTIONS]
-     * -d,--delta <DELTA_FACTOR>   maxDx coeff. (1.1 default)
+     * -d,--delta <DELTA_FACTOR>   maxDx coeff. (1.5 default)
      * -h                          show this help and exit
      * -pa,--particles <NUM>       number of particles, if set all mk_config.ini options ignored
+     * -stp,--steps <NUM>          number of total steps, if set all mk_config.ini options ignored
      * -po,--polka <POLKA>         polochka parameter value (2.0 default)
      * -r,--refresh <SECONDS>      threads status refresh interval (30 sec. default)
      * -w,--workers <NUM>          number of parallel threads (default is MAX(2, CPUs/2)
@@ -23,6 +26,21 @@ public class Main {
 
         Date start = new Date();
         System.out.println("\nMonte-Karlo game v. " + version + ", (c) Michael Butlitsky 2013\n");
+
+        /* playground
+        Deque<Double> deck = new ArrayDeque<Double>(3);
+        deck.addFirst(4.9);
+        deck.addFirst(3.9);
+        deck.addFirst(0.9);
+
+        while (start != null) {
+            deck.addFirst(7.7);
+            deck.addFirst(2.7);
+            deck.removeLast();
+            deck.removeLast();
+
+            System.out.println(deck);
+        }             */
 
         // apache CLI lib options parser
         parseArgs(args);
@@ -76,8 +94,13 @@ public class Main {
                 "particles, if set all mk_config.ini options ignored").withLongOpt("particles")
                 .create("pa");
 
+        Option steps = OptionBuilder.withArgName("NUM").hasArg().withDescription("number of " +
+                "steps (x Number of Particles), if set all mk_config.ini options ignored")
+                .withLongOpt("steps")
+                .create("stp");
+
         Option delta = OptionBuilder.withArgName("DELTA_FACTOR").hasArg()
-                .withDescription("maxDx coeff. (1.2 default)").withLongOpt("delta").create("d");
+                .withDescription("maxDx coeff. (1.5 default)").withLongOpt("delta").create("d");
 
         Option refresh = OptionBuilder.withArgName("SECONDS").hasArg()
                 .withDescription("threads status refresh interval (7 sec. default)")
@@ -92,6 +115,7 @@ public class Main {
         options.addOption(refresh);
         options.addOption(workers);
         options.addOption(particles);
+        options.addOption(steps);
 
         CommandLineParser parser = new BasicParser();
 
@@ -107,6 +131,11 @@ public class Main {
             if (line.hasOption("pa")) {
                 Ensemble.DEFAULT_NUM_PARTICLES = Integer.parseInt(line.getOptionValue("pa"));
                 System.out.println("Custom particles number = " + Ensemble.DEFAULT_NUM_PARTICLES);
+            }
+
+            if (line.hasOption("stp")) {
+                Ensemble.DEFAULT_NUM_STEPS = Integer.parseInt(line.getOptionValue("stp"));
+                System.out.println("Custom steps number = " + Ensemble.DEFAULT_NUM_STEPS);
             }
 
             if (line.hasOption("po")) {

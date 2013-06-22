@@ -33,7 +33,7 @@ public interface IEnsemble extends Runnable {
 
     double getEnergy();
 
-    double getPressure();
+//    double getPressure();
 
     int getNumPart();
 
