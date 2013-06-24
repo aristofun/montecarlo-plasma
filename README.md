@@ -40,7 +40,13 @@ Parameters must be delimited by any space character. Note that some global optio
 Line format:
 
 		T, Density, maxDx/y/z coeff., numParticles, numSteps, strategy (1 – save long tail configurations), resume existing config
-
+		
+maxDx/y/z 
+	– if zero __and global --delta not defined__ used the whole box size (each trial move can place particle at any place inside the box).
+	– if float number >= 1  __and global --delta not defined__ trial shift delta position == this number * average distance between particles (depends on density) along every axis.
+	– if float number < 1 __and global --delta not defined__ trial shift delta is this fraction of a box size along each axis (i. e. 0.5 means trial particle shifts to half of box size along each axis). 
+	
+	
 How it works
 ==
 
