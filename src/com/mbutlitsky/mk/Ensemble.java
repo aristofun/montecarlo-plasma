@@ -8,10 +8,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static com.mbutlitsky.mk.EnsembleController.getPath;
 import static java.lang.Math.*;
@@ -27,17 +25,20 @@ import static java.lang.Math.*;
 public abstract class Ensemble implements IEnsemble {
 
     //    private static final int CALC_ENERGY_INT = 72073; // make less for big num part
-    private static final int SAVE_CONFIG_N_CORR_INT = 524287; // make less for big num part
-    private static final int CALC_CORR_INT = 361275;
+    private final int SAVE_CONFIG_N_CORR_INT;// = 12287; // make less for big num part
+    //    private static final int CALC_CORR_n_ENERGY_INT = 91;
+    private final int CALC_CORR_INT;// = 361275;
+    //    private static final int CALC_ENERGY_INT = 12251;
+    private final int AVERAGE_ENERGY_INT;// = 1831;
 
-    private static final int SAVE_ENERGY_INT = 84631;
-    private static final int CALC_ENERGY_INT = 12251;
+    private static final int INITIAL_NUM_STEPS = 10;  // how many steps from beginning to ignore
 
-    public static double DELTA_FACTOR = 1.5;
+    public static double DELTA_FACTOR = -1; //1.5;
+
     /**
      * overrides specific particle number in ini file if set in CLI options
      */
-    public static int DEFAULT_NUM_PARTICLES = 0;
+    public static int DEFAULT_NUM_PARTICLES = -1;
     /**
      * overrides number of steps for all ensembles
      */
@@ -49,7 +50,10 @@ public abstract class Ensemble implements IEnsemble {
     // ----------  controllers  --------------
     private final EOptions opt;
     private final String myFolder;
+
     private final MersenneTwisterFast rnd;
+    private final Random localRnd;
+
     private Path myConfigPath;
     private Path myCorrPath;
     private volatile boolean finished = false;
@@ -71,7 +75,6 @@ public abstract class Ensemble implements IEnsemble {
     private final double boxSize;
     private final double halfBox;
     private final double maxDelta;
-    private final double avgDistance;
 
     private final double corrNormirovka;
     private final double corrDr;
@@ -83,26 +86,36 @@ public abstract class Ensemble implements IEnsemble {
     private final double[] Zs;
 
     private double potential = 0;
-    private double energy = 0;
 
-    private static int NUM_ENERGY_AVG_POINTS = 64;
+    public static int NUM_ENERGY_AVG_POINTS = 128;
+
     // averaging energies values stack
-    private Deque<Double> energies = new ArrayDeque<Double>(NUM_ENERGY_AVG_POINTS);
+    private final Deque<Double> energies = new ArrayDeque<>(NUM_ENERGY_AVG_POINTS);
     private double avgEnergy = 0;
+    private double energy = 0;
 
 
     public Ensemble(EOptions options) {
         rnd = new MersenneTwisterFast();
+        localRnd = ThreadLocalRandom.current();
+
         opt = options;
         boxSize = pow(opt.getNumParticles() / (2 * opt.getDensity()), 0.3333333333333333) / BOHR;
         halfBox = boxSize / 2.0;
-        avgDistance = pow(opt.getDensity(), -0.333333333333333333) / BOHR;
+        double avgDistance = pow(opt.getDensity(), -0.333333333333333333) / BOHR;
 
         // ignore specific delta factor if set to zero
-        maxDelta = (opt.getMaxDelta() == 0.0) ? DELTA_FACTOR * avgDistance : opt.getMaxDelta();
 
-        numPart = (DEFAULT_NUM_PARTICLES == 0) ? opt.getNumParticles() : DEFAULT_NUM_PARTICLES;
+        double factor = (DELTA_FACTOR < 0) ? opt.getMaxDelta() : DELTA_FACTOR;
+        if (factor < 0) factor = abs(factor);
+
+        maxDelta = (factor == 0.0) ?
+                boxSize :
+                ((factor > 1) ? factor * avgDistance : factor * boxSize);
+
+        numPart = (DEFAULT_NUM_PARTICLES < 0) ? opt.getNumParticles() : DEFAULT_NUM_PARTICLES;
         numSteps = (DEFAULT_NUM_STEPS < 0) ? opt.getNumSteps() * numPart : DEFAULT_NUM_STEPS * numPart;
+
         T = opt.getT();
         myFolder = opt.getFolder();
 
@@ -122,6 +135,10 @@ public abstract class Ensemble implements IEnsemble {
 
         // OPTIONS first bit == save longtail
         saveLongTail = ((options.getStrategy() & 1) == 1);
+        // simulation timeframes scaled by number of particles
+        CALC_CORR_INT = numPart * 3;
+        AVERAGE_ENERGY_INT = numPart * 5;
+        SAVE_CONFIG_N_CORR_INT = numPart * 27;
     }
 
     /**
@@ -141,6 +158,7 @@ public abstract class Ensemble implements IEnsemble {
     private void initEnergy() {
         resetPotential();
         if (avgEnergy == 0) {
+            calcEnergy();
             averageEnergy();
         }
     }
@@ -214,18 +232,20 @@ public abstract class Ensemble implements IEnsemble {
     /**
      * Record current energy value to averager array
      */
-    private final void currentEnergy() {
-        resetEnergy();
+    private final void calcEnergy() {
+        energy = getCurrentEnergy();
+        oldEnergy();
+    }
+
+    private final void oldEnergy() {
+        if (energies.size() > NUM_ENERGY_AVG_POINTS - 1) energies.pollLast();
         energies.addFirst(energy);
-        if (energies.size() > 63) energies.pollLast();
     }
 
     /**
      * calculates full system potential from scratch, based on current particles configuration
      */
     private final void averageEnergy() {
-        currentEnergy();
-
         double enrg = 0.0;
 
         for (Double val : energies) {
@@ -246,18 +266,14 @@ public abstract class Ensemble implements IEnsemble {
         potential = newEn;
     }
 
-    private final void resetEnergy() {
+    private final double getCurrentEnergy() {
         double newEn = 0;
         for (int i = 0; i < numPart; i++) {
             for (int j = i + 1; j < numPart; j++) {
                 newEn = newEn + getEnergy(i, j);
             }
         }
-
-//        if (abs(newEn - potential) > abs(potential * 0.0000001))
-//            System.out.println("ACHTUNG! new - old == " + (newEn - potential) + ", step: " + currStep
-//                    + ", " + myFolder + ", potential: " + potential + ", newEn: " + newEn);
-        energy = newEn;
+        return newEn;
     }
 
     /**
@@ -319,7 +335,7 @@ public abstract class Ensemble implements IEnsemble {
 
     protected abstract double getEnergy(double r, boolean attraction);
 
-    public final double dSquared(double dx, double dy, double dz) {
+    final double dSquared(double dx, double dy, double dz) {
         dx = dSquared(dx);
         dy = dSquared(dy);
         dz = dSquared(dz);
@@ -334,24 +350,20 @@ public abstract class Ensemble implements IEnsemble {
     /**
      * random (-1.0; 1.0)
      */
-    protected final double myRandom() {
+    final double myRandom() {
         return ((double) rnd.nextInt() / Integer.MAX_VALUE);
+//        return ((double) rnd.nextInt() / Integer.MAX_VALUE);
 //        return ThreadLocalRandom.current().nextDouble(-1.,1.);
     }
 
-    protected final int myRandom(int size) {
-        return rnd.nextInt(size);
-//        return ThreadLocalRandom.current().nextInt(size);
-    }
-
     /**
-     * returns Mersenne Twister random (0; size) double value
+     * returns Mersenne Twister random [0; size) double value
      */
-    protected final double myRandom(double size) {
-        // faster on Core 2 Duo
-        return size * ((double) rnd.nextInt() / Integer.MAX_VALUE + 1) / 2;
-//        return rnd.nextDouble() * size;
-//        return ThreadLocalRandom.current().nextDouble(size);
+    final double myRandom(double size) {
+        return rnd.nextDouble() * size;
+
+//      faster on Core 2 Duo
+//        return size * ((double) rnd.nextInt() / Integer.MAX_VALUE + 1) / 2;
     }
 
     /**
@@ -377,7 +389,7 @@ public abstract class Ensemble implements IEnsemble {
     }
 
     private final void saveCorrelation() {
-        List<String> strings = new ArrayList<String>(CORR_LENGTH);
+        List<String> strings = new ArrayList<>(CORR_LENGTH);
 
         if (corrAverager == 0) {
             System.out.println("WARNING: corrAverager == 0 for " + myFolder + ", " +
@@ -406,7 +418,7 @@ public abstract class Ensemble implements IEnsemble {
         }
     }
 
-    public void saveState() {
+    void saveState() {
         averageEnergy();
 
         // create strings list from arrays
@@ -416,7 +428,6 @@ public abstract class Ensemble implements IEnsemble {
             writer.write("" + currStep + "\t"
                     + FORMAT.format(avgEnergy) + "\t"
                     + SHORT_FORMAT.format(avgEnergy / numPart) + "\t"
-                    + SHORT_FORMAT.format(energy / numPart) + "\t"
                     + SHORT_FORMAT.format(opt.getGamma()));
 
             writer.newLine();
@@ -448,47 +459,70 @@ public abstract class Ensemble implements IEnsemble {
     @Override
     public void run() {
         System.out.println();
-        if (currStep >= numSteps) {
+        if (currStep >= numSteps || finished) {
             System.out.print(myFolder + " No run.\t");
             finished = true;
             return;
         }
 
-
         int i = currStep;
 
-        while (i < numSteps) {
+        // fast run through initial steps, unstable configuration
+        if (currStep < INITIAL_NUM_STEPS * numPart && numSteps > INITIAL_NUM_STEPS * numPart) {
+            System.out.println("Ignoring first " + INITIAL_NUM_STEPS * numPart + " steps...");
 
-            if (finished) {
-                System.out.print("STOP " + myFolder + ", finished=true\t");
-                break;
+            while (i < INITIAL_NUM_STEPS * numPart) {
+                if (finished) {
+                    System.out.print("STOP " + myFolder + ", finished=true\t");
+                    break;
+                }
+                play();
+                i++;
             }
-
-            play();
-
-            if (i % CALC_CORR_INT == 0) calcCorrelation();
-            if (i % CALC_ENERGY_INT == 0) currentEnergy();
-
-            if (i % SAVE_ENERGY_INT == 0) averageEnergy();
-
-            if (i % SAVE_CONFIG_N_CORR_INT == 0) {
-                saveCorrelation();
-                saveState();
-                if (saveLongTail) saveLongTail();
-
-                //resetPotential(); // TODO: may be removed, just in case for cleaning up potential
-            }
-
-            i++;
-            currStep = i;
         }
 
+        currStep = i;
+
+        if (!finished) {
+            while (i < numSteps) {
+                if (finished) {
+                    System.out.print("STOP " + myFolder + ", finished=true\t");
+                    break;
+                }
+
+                if (play()) {
+                    calcEnergy();
+                    currStep = i;
+                } else {
+                    oldEnergy();
+                }
+
+                if (i % CALC_CORR_INT == 0) { // no need for correlation accuracy
+                    calcCorrelation();
+                }
+
+
+                if (i % AVERAGE_ENERGY_INT == 0) {
+                    averageEnergy();
+                }
+
+                if (i % SAVE_CONFIG_N_CORR_INT == 0) {
+                    saveCorrelation();
+                    saveState();
+                    if (saveLongTail) saveLongTail();
+                    //resetPotential(); // TODO: may be removed, just in case for cleaning up potential
+                }
+
+                i++;
+            }
+
+        }
         finished = true;
 
         saveState();
-
         saveLongTail();
         closeLongTail();
+
         System.out.print("" + myFolder + " finished on " + currStep + " steps.\t");
     }
 
@@ -553,7 +587,7 @@ public abstract class Ensemble implements IEnsemble {
      * performs one act of monte-karlo play randomly moves one particle and saves the state
      * with some probability
      */
-    private final void play() {
+    private final boolean play() {
 //        for (int j = 0; j < numPart; j++) {
         // move random particle
         final double deltaE = moveParticle();
@@ -562,14 +596,17 @@ public abstract class Ensemble implements IEnsemble {
         if (deltaE > 0) {
             // compare the transition probability with random
             // All energies are in kT
-            if (Math.exp(-deltaE) >= myRandom(1.0))   // accept movement
+            if (Math.exp(-deltaE) >= myRandom(1.0)) {
                 acceptTrial(deltaE);
-
+                return true;
+            }
             // potential decreased, accept configuration
         } else {
             acceptTrial(deltaE);
+            return true;
         }
-//        }
+
+        return false;
     }
 
     private final void acceptTrial(double deltaE) {
@@ -588,7 +625,8 @@ public abstract class Ensemble implements IEnsemble {
         final double z = myRandom() * maxDelta;
 
         // setting new trial index and coordinates
-        which = myRandom(numPart);
+        which = localRnd.nextInt(numPart);
+
         xTrial = correctPosition(Xs[which] + x);
         yTrial = correctPosition(Ys[which] + y);
         zTrial = correctPosition(Zs[which] + z);

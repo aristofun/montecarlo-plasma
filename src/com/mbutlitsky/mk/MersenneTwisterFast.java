@@ -1203,6 +1203,7 @@ public strictfp class MersenneTwisterFast implements Serializable, Cloneable {
         System.out.println("\nTime to test grabbing 100000000 ints");
 
         Random rr = ThreadLocalRandom.current();
+//        Random rr = new Random();
         xx = 0;
         ms = System.currentTimeMillis();
         for (j = 0; j < 100000000; j++)
@@ -1214,11 +1215,12 @@ public strictfp class MersenneTwisterFast implements Serializable, Cloneable {
         ms = System.currentTimeMillis();
         xx = 0;
         for (j = 0; j < 100000000; j++)
-            xx += ((double) r.nextInt() / Integer.MAX_VALUE + 1)/2;
-//            xx += r.nextDouble();
+//            xx += ((double) r.nextInt() / Integer.MAX_VALUE + 1)/2;
+            xx += r.nextDouble();
         System.out.println("Mersenne Twister Fast: " + (System.currentTimeMillis() - ms) + "          Ignore this: " + xx);
         System.out.println(((double)r.nextInt()/Integer.MAX_VALUE + 1)/2);
         // TEST TO COMPARE TYPE CONVERSION BETWEEN
+
         // MersenneTwisterFast.java AND MersenneTwister.java
 
       /*  System.out.println("\nGrab the first 1000 booleans");

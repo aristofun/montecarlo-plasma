@@ -22,7 +22,7 @@ public class EnsembleController implements IEnsembleController {
     /**
      * how often check child ensembles & display status on console
      */
-    public static int REFRESH_DELAY = 20000;
+    public static int REFRESH_DELAY = 5000;
 
     /**
      * may be overriden by CLI options, if zero – max(2, CPUs/2) used

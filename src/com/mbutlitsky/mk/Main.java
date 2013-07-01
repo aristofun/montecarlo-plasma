@@ -2,14 +2,12 @@ package com.mbutlitsky.mk;
 
 import org.apache.commons.cli.*;
 
-import java.util.ArrayDeque;
 import java.util.Date;
-import java.util.Deque;
 import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "2.0";
+    public static final String version = "2.3";
 
     /**
      * <pre>usage: (./runmk.command | runmk.bat) [OPTIONS]
@@ -81,8 +79,8 @@ public class Main {
     }
 
     private static void parseArgs(String[] args) {
-        Option temp = OptionBuilder.withArgName("TEMP").hasArg().withDescription("temperature " +
-                "for polochka (1K default)").withLongOpt("temp").create("t");
+//        Option temp = OptionBuilder.withArgName("TEMP").hasArg().withDescription("temperature " +
+//                "for polochka (1K default)").withLongOpt("temp").create("t");
 
         Option polka = OptionBuilder.withArgName("POLKA").hasArg().withDescription("polochka " +
                 "parameter value (2.0 default)").withLongOpt("polka").create("po");
@@ -94,22 +92,31 @@ public class Main {
                 "particles, if set all mk_config.ini options ignored").withLongOpt("particles")
                 .create("pa");
 
+        Option avpoints = OptionBuilder.withArgName("NUM").hasArg().withDescription("number of " +
+                "averaging points for Energy (128 default)").withLongOpt("avpoints")
+                .create("ap");
+
         Option steps = OptionBuilder.withArgName("NUM").hasArg().withDescription("number of " +
                 "steps (x Number of Particles), if set all mk_config.ini options ignored")
                 .withLongOpt("steps")
                 .create("stp");
 
         Option delta = OptionBuilder.withArgName("DELTA_FACTOR").hasArg()
-                .withDescription("maxDx coeff. (1.5 default)").withLongOpt("delta").create("d");
+                .withDescription("maxDx coeff. (overrides .ini parameters if set) \n" +
+                        "        – zero equals 1.0\n" +
+                        "        – if float number > 1  trial shift delta position == this number * average distance between particles (depends on density) along every axis.\n" +
+                        "        – if float number <= 1 trial shift delta is this fraction of a " +
+                        "box size along each axis (i. e. 0.5 means trial particle shifts to half of box size along each axis). \n")
+                .withLongOpt("delta").create("d");
 
         Option refresh = OptionBuilder.withArgName("SECONDS").hasArg()
-                .withDescription("threads status refresh interval (7 sec. default)")
+                .withDescription("threads status refresh interval (5 sec. default)")
                 .withLongOpt("refresh").create("r");
 
 
         Options options = new Options();
         options.addOption("h", false, "show this help and exit");
-//        options.addOption(temp);
+        options.addOption(avpoints);
         options.addOption(polka);
         options.addOption(delta);
         options.addOption(refresh);
@@ -155,8 +162,8 @@ public class Main {
 
             if (line.hasOption("d")) {
                 Ensemble.DELTA_FACTOR = Double.parseDouble(line.getOptionValue("delta"));
+                System.out.println("Custom delta X = " + Ensemble.DELTA_FACTOR);
             }
-            System.out.println("Delta factor = " + Ensemble.DELTA_FACTOR);
 
 
             if (line.hasOption("r")) {
@@ -164,6 +171,12 @@ public class Main {
                         = 1000 * Integer.parseInt(line.getOptionValue("refresh"));
             }
             System.out.println("Status refresh delay = " + EnsembleController.REFRESH_DELAY / 1000);
+
+            if (line.hasOption("ap")) {
+                Ensemble.NUM_ENERGY_AVG_POINTS
+                        = Integer.parseInt(line.getOptionValue("ap"));
+            }
+            System.out.println("Avg. points = " + Ensemble.NUM_ENERGY_AVG_POINTS);
 
         } catch (Exception exp) {
             // oops, something went wrong
