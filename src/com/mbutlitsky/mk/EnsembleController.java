@@ -29,7 +29,7 @@ public class EnsembleController implements IEnsembleController {
      */
     public static int NUM_THREADS = 0;
 
-    private static final int DRAW_STATUS_INT = 3;
+    private static final int DRAW_STATUS_INT = 1;
     private volatile boolean running = true;
 
     private static final String CONFIG_FILE = "mk_config.ini";
@@ -125,7 +125,7 @@ public class EnsembleController implements IEnsembleController {
 
             // heavy status reports (saving energies & plots)
             if (i % DRAW_STATUS_INT == 0) drawStatus();
-            if (i % (DRAW_STATUS_INT * 2) == 0) saveEnergies();
+            if (i % (DRAW_STATUS_INT * 3) == 0) saveEnergies();
 
             refreshStatus();
             i++;

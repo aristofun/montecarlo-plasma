@@ -31,7 +31,7 @@ public abstract class Ensemble implements IEnsemble {
     //    private static final int CALC_ENERGY_INT = 12251;
     private final int AVERAGE_ENERGY_INT;// = 1831;
 
-    private static final int INITIAL_NUM_STEPS = 10;  // how many steps from beginning to ignore
+    private static final int INITIAL_NUM_STEPS = 30;  // how many steps from beginning to ignore
 
     public static double DELTA_FACTOR = -1; //1.5;
 
@@ -52,7 +52,7 @@ public abstract class Ensemble implements IEnsemble {
     private final String myFolder;
 
     private final MersenneTwisterFast rnd;
-    private final Random localRnd;
+    private final ThreadLocalRandom localRnd;
 
     private Path myConfigPath;
     private Path myCorrPath;
@@ -87,7 +87,7 @@ public abstract class Ensemble implements IEnsemble {
 
     private double potential = 0;
 
-    public static int NUM_ENERGY_AVG_POINTS = 128;
+    public static int NUM_ENERGY_AVG_POINTS = 1024;
 
     // averaging energies values stack
     private final Deque<Double> energies = new ArrayDeque<>(NUM_ENERGY_AVG_POINTS);
@@ -111,7 +111,7 @@ public abstract class Ensemble implements IEnsemble {
 
         maxDelta = (factor == 0.0) ?
                 boxSize :
-                ((factor > 1) ? factor * avgDistance : factor * boxSize);
+                ((factor >= 1) ? factor * avgDistance : factor * boxSize);
 
         numPart = (DEFAULT_NUM_PARTICLES < 0) ? opt.getNumParticles() : DEFAULT_NUM_PARTICLES;
         numSteps = (DEFAULT_NUM_STEPS < 0) ? opt.getNumSteps() * numPart : DEFAULT_NUM_STEPS * numPart;
@@ -119,6 +119,7 @@ public abstract class Ensemble implements IEnsemble {
         T = opt.getT();
         myFolder = opt.getFolder();
 
+        System.out.println(myFolder + ": avg dist = " + avgDistance + ", delta = " + maxDelta);
 //        double maxDistance = sqrt(3.0 * boxSize * boxSize) / 1.99;
 
         corrNormirovka = 4. * (boxSize * boxSize * boxSize) / (numPart * numPart);
@@ -136,9 +137,9 @@ public abstract class Ensemble implements IEnsemble {
         // OPTIONS first bit == save longtail
         saveLongTail = ((options.getStrategy() & 1) == 1);
         // simulation timeframes scaled by number of particles
-        CALC_CORR_INT = numPart * 3;
-        AVERAGE_ENERGY_INT = numPart * 5;
-        SAVE_CONFIG_N_CORR_INT = numPart * 27;
+        CALC_CORR_INT = numPart * 2;
+        AVERAGE_ENERGY_INT = numPart + NUM_ENERGY_AVG_POINTS;
+        SAVE_CONFIG_N_CORR_INT = numPart * 5;
     }
 
     /**
@@ -160,6 +161,8 @@ public abstract class Ensemble implements IEnsemble {
         if (avgEnergy == 0) {
             calcEnergy();
             averageEnergy();
+        } else {
+            energy = avgEnergy;
         }
     }
 
@@ -517,6 +520,7 @@ public abstract class Ensemble implements IEnsemble {
             }
 
         }
+        currStep = i;
         finished = true;
 
         saveState();
@@ -596,7 +600,7 @@ public abstract class Ensemble implements IEnsemble {
         if (deltaE > 0) {
             // compare the transition probability with random
             // All energies are in kT
-            if (Math.exp(-deltaE) >= myRandom(1.0)) {
+            if (Math.exp(-deltaE) >= localRnd.nextDouble(1.0)) {
                 acceptTrial(deltaE);
                 return true;
             }

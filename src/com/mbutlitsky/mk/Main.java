@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "2.3";
+    public static final String version = "2.6";
 
     /**
      * <pre>usage: (./runmk.command | runmk.bat) [OPTIONS]
@@ -103,9 +103,10 @@ public class Main {
 
         Option delta = OptionBuilder.withArgName("DELTA_FACTOR").hasArg()
                 .withDescription("maxDx coeff. (overrides .ini parameters if set) \n" +
-                        "        – zero equals 1.0\n" +
-                        "        – if float number > 1  trial shift delta position == this number * average distance between particles (depends on density) along every axis.\n" +
-                        "        – if float number <= 1 trial shift delta is this fraction of a " +
+                        "        – zero equals 1. x BOX SIZE \n" +
+                        "        – if float number >= 1  trial shift delta position == this " +
+                        "number * average distance between particles (depends on density) along every axis.\n" +
+                        "        – if float number < 1 trial shift delta is this fraction of a " +
                         "box size along each axis (i. e. 0.5 means trial particle shifts to half of box size along each axis). \n")
                 .withLongOpt("delta").create("d");
 
