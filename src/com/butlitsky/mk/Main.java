@@ -1,4 +1,4 @@
-package com.mbutlitsky.mk;
+package com.butlitsky.mk;
 
 import org.apache.commons.cli.*;
 
@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "2.6";
+    public static final String version = "3.0";
 
     /**
      * <pre>usage: (./runmk.command | runmk.bat) [OPTIONS]

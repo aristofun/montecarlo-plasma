@@ -1,1 +1,1 @@
-java -cp "*" com.mbutlitsky.mk.Main %*
+java -cp "*" com.butlitsky.mk.Main %*

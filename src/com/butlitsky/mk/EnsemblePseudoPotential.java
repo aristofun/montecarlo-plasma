@@ -1,21 +1,20 @@
-package com.mbutlitsky.mk;
+package com.butlitsky.mk;
 
 /**
+ * Pseudo potential ensemble. Electron-ion pseudopotential approximation
+ * is unique for every [level numbers + temperature] combination.
+ * <p/>
  * User: aristofun
  * Date: 02.03.13
  * Time: 17:19
  */
-public class EnsemblePolochka extends Ensemble {
-    /**
-     * polochka deepness in kT
-     */
-    public static double EPSILON = 4.0;
+public class EnsemblePseudoPotential extends Ensemble {
+//    private final PseudoDelegate myPseudo;
 
-    private final double myEpsilon;
+    public static final double LACING_POINT = 200.0;
 
-    public EnsemblePolochka(EOptions options) {
+    public EnsemblePseudoPotential(EOptions options) {
         super(options);
-        myEpsilon = EPSILON;
         initialize();
     }
 
@@ -27,13 +26,15 @@ public class EnsemblePolochka extends Ensemble {
      *
      * => converted potential coeff. = e^2 / 7,30607881244045 * (e+5) = 3,
      * 15775016117465 e+5 = e+6/ 3,1668116505709 = 315775,01611746440408
+     *
+     * CURRENT version is for LEVEL 10-30 for 100K only
      * */
     protected final double getPotential(double r, boolean attraction) {
 
         if (attraction)   // ion-electron
         {
-            if (r < (315775.01611746440408 / (T * myEpsilon)))
-                return (-1 * myEpsilon); //
+            if (r < LACING_POINT)
+                return (-24.836465138387798 + 1.6042494381847763 * Math.pow(r, 0.3));
             else {
                 return (-1 * 315775.01611746440408 / (T * r));
             }
@@ -47,12 +48,11 @@ public class EnsemblePolochka extends Ensemble {
     }
 
     @Override
-    protected final double getEnergy(double r, boolean attraction) {
-        // – constant potential makes zero contribution to Energy
-        if (attraction && (r < (315775.01611746440408 / (T * myEpsilon)))) {
-            return 0;
-        } else {
-            return getPotential(r, attraction);
-        }
+    protected double getEnergy(double r, boolean attraction) {
+        return getPotential(r, attraction);
     }
+
+//    private abstract class PseudoDelegate {
+//        abstract double pseudo(double x);
+//    }
 }

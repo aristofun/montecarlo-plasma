@@ -1,4 +1,4 @@
-package com.mbutlitsky.mk;
+package com.butlitsky.mk;
 
 /**
  * Created with IntelliJ IDEA.

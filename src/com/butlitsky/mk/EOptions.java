@@ -1,11 +1,11 @@
-package com.mbutlitsky.mk;
+package com.butlitsky.mk;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Scanner;
 
-import static com.mbutlitsky.mk.IEnsemble.e;
-import static com.mbutlitsky.mk.IEnsemble.k;
+import static com.butlitsky.mk.IEnsemble.e;
+import static com.butlitsky.mk.IEnsemble.k;
 import static java.lang.Math.abs;
 import static java.lang.Math.pow;
 

@@ -1,4 +1,4 @@
-package com.mbutlitsky.mk;
+package com.butlitsky.mk;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -8,11 +8,14 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static com.mbutlitsky.mk.EnsembleController.getPath;
-import static java.lang.Math.*;
+import static com.butlitsky.mk.EnsembleController.getPath;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * total num steps usually
@@ -31,7 +34,7 @@ public abstract class Ensemble implements IEnsemble {
     //    private static final int CALC_ENERGY_INT = 12251;
     private final int AVERAGE_ENERGY_INT;// = 1831;
 
-    private static final int INITIAL_NUM_STEPS = 30;  // how many steps from beginning to ignore
+    private static final int INITIAL_NUM_STEPS = 20;  // how many steps from beginning to ignore
 
     public static double DELTA_FACTOR = -1; //1.5;
 
@@ -87,10 +90,10 @@ public abstract class Ensemble implements IEnsemble {
 
     private double potential = 0;
 
-    public static int NUM_ENERGY_AVG_POINTS = 1024;
+    public static int NUM_ENERGY_AVG_POINTS = -1;
 
     // averaging energies values stack
-    private final Deque<Double> energies = new ArrayDeque<>(NUM_ENERGY_AVG_POINTS);
+    private final Deque<Double> energies;
     private double avgEnergy = 0;
     private double energy = 0;
 
@@ -100,9 +103,13 @@ public abstract class Ensemble implements IEnsemble {
         localRnd = ThreadLocalRandom.current();
 
         opt = options;
-        boxSize = pow(opt.getNumParticles() / (2 * opt.getDensity()), 0.3333333333333333) / BOHR;
+        boxSize = pow(opt.getNumParticles() / (2 * opt.getDensity()),
+                0.33333333333333333333) / BOHR; // parameter is Ne(Ni),
+        // we double 'cause total density is twice bigger
         halfBox = boxSize / 2.0;
-        double avgDistance = pow(opt.getDensity(), -0.333333333333333333) / BOHR;
+
+        // average e-i distance => x 2
+        double avgDistance = pow(2 * opt.getDensity(), -0.3333333333333333333333) / BOHR;
 
         // ignore specific delta factor if set to zero
 
@@ -123,7 +130,7 @@ public abstract class Ensemble implements IEnsemble {
 //        double maxDistance = sqrt(3.0 * boxSize * boxSize) / 1.99;
 
         corrNormirovka = 4. * (boxSize * boxSize * boxSize) / (numPart * numPart);
-        corrDr = sqrt(3.0 * boxSize * boxSize) / 1.99999999999 / (CORR_LENGTH);
+        corrDr = StrictMath.sqrt(3.0 * boxSize * boxSize) / 1.99999999999 / (CORR_LENGTH);
 
         corrArray[0] = new double[CORR_LENGTH];
         corrArray[1] = new double[CORR_LENGTH];
@@ -137,9 +144,15 @@ public abstract class Ensemble implements IEnsemble {
         // OPTIONS first bit == save longtail
         saveLongTail = ((options.getStrategy() & 1) == 1);
         // simulation timeframes scaled by number of particles
-        CALC_CORR_INT = numPart * 2;
-        AVERAGE_ENERGY_INT = numPart + NUM_ENERGY_AVG_POINTS;
+        CALC_CORR_INT = numPart;
+        AVERAGE_ENERGY_INT = numPart * 3;
         SAVE_CONFIG_N_CORR_INT = numPart * 5;
+
+        if (NUM_ENERGY_AVG_POINTS < 0) {
+            NUM_ENERGY_AVG_POINTS = numSteps - INITIAL_NUM_STEPS * numPart;
+        }
+        System.out.print(" AVG_POINTS: " + NUM_ENERGY_AVG_POINTS + " ");
+        energies = new ArrayDeque<>(NUM_ENERGY_AVG_POINTS);
     }
 
     /**
@@ -285,7 +298,7 @@ public abstract class Ensemble implements IEnsemble {
      * @return potential between two particles assuming j[trialX, trialY, trialZ] particle
      */
     private final double getPotential(int i, int j, double trialX, double trialY, double trialZ) {
-        final double r = sqrt(dSquared(trialX - Xs[i], trialY - Ys[i], trialZ - Zs[i]));
+        final double r = StrictMath.sqrt(dSquared(trialX - Xs[i], trialY - Ys[i], trialZ - Zs[i]));
 
         if (i != j) {
             if (j < (numPart / 2))   // First _num/2 are IONS
@@ -316,7 +329,7 @@ public abstract class Ensemble implements IEnsemble {
     protected abstract double getPotential(double r, boolean attraction);
 
     private final double getEnergy(int i, int j) {
-        final double r = sqrt(dSquared(Xs[j] - Xs[i], Ys[j] - Ys[i], Zs[j] - Zs[i]));
+        final double r = StrictMath.sqrt(dSquared(Xs[j] - Xs[i], Ys[j] - Ys[i], Zs[j] - Zs[i]));
 
         if (i != j) {
             if (j < (numPart / 2))   // First _num/2 are IONS
@@ -354,7 +367,7 @@ public abstract class Ensemble implements IEnsemble {
      * random (-1.0; 1.0)
      */
     final double myRandom() {
-        return ((double) rnd.nextInt() / Integer.MAX_VALUE);
+        return rnd.nextDouble(true, true) * 2.0 - 1.0;
 //        return ((double) rnd.nextInt() / Integer.MAX_VALUE);
 //        return ThreadLocalRandom.current().nextDouble(-1.,1.);
     }
@@ -554,7 +567,8 @@ public abstract class Ensemble implements IEnsemble {
         if (i != j) {
             // get the index of a radius in array
             final int idx =
-                    (int) (sqrt(dSquared(Xs[i] - Xs[j], Ys[i] - Ys[j], Zs[i] - Zs[j])) / corrDr);
+                    (int) (StrictMath.sqrt(dSquared(Xs[i] - Xs[j], Ys[i] - Ys[j],
+                            Zs[i] - Zs[j])) / corrDr);
             // increment ION-ION array
             if (idx < CORR_LENGTH)
                 corrArray[corrIndex][idx]++;
@@ -600,7 +614,7 @@ public abstract class Ensemble implements IEnsemble {
         if (deltaE > 0) {
             // compare the transition probability with random
             // All energies are in kT
-            if (Math.exp(-deltaE) >= localRnd.nextDouble(1.0)) {
+            if (exp(-deltaE) >= localRnd.nextDouble(1.0)) {
                 acceptTrial(deltaE);
                 return true;
             }
