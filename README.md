@@ -5,15 +5,13 @@ Simple Markov chain Monte Carlo implementation for two component Coulomb plasma.
 Periodical boundary conditions.
 See more at: http://en.wikipedia.org/wiki/Markov_chain_Monte_Carlo
 
-This code uses good random algorithm: http://www.cs.gmu.edu/~sean/research/
+This code uses good MersenneTwister random algorithm: http://www.cs.gmu.edu/~sean/research/mersenne/MersenneTwisterFast.java
 
 It's made for multithreaded running of a set of points simultaneously.
 
 Written for Java 7.
 
-BTW, it works fast, really fast!
-
-I mean, it's faster than the same code written in C++ and compiled by GCC 4, both on Mac OS X (Intel Core i7) and Windows 7 (Inter Core 2 Duo).
+BTW, it works pretty fast.
 
 Contact me: aristofun at ya.ru
 
