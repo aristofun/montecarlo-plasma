@@ -88,7 +88,7 @@ public abstract class Ensemble implements IEnsemble {
     private final double[] Ys;
     private final double[] Zs;
 
-    private double potential = 0;
+//    private double potential = 0;
 
     public static int NUM_ENERGY_AVG_POINTS = -1;
 
@@ -126,7 +126,8 @@ public abstract class Ensemble implements IEnsemble {
         T = opt.getT();
         myFolder = opt.getFolder();
 
-        System.out.println(myFolder + ": avg dist = " + avgDistance + ", delta = " + maxDelta);
+        System.out.println(myFolder + ": avg dist = " + avgDistance + ", " +
+                "delta = " + maxDelta + ", boxSize = " + boxSize);
 //        double maxDistance = sqrt(3.0 * boxSize * boxSize) / 1.99;
 
         corrNormirovka = 4. * (boxSize * boxSize * boxSize) / (numPart * numPart);
@@ -151,7 +152,7 @@ public abstract class Ensemble implements IEnsemble {
         if (NUM_ENERGY_AVG_POINTS < 0) {
             NUM_ENERGY_AVG_POINTS = numSteps - INITIAL_NUM_STEPS * numPart;
         }
-        System.out.print(" AVG_POINTS: " + NUM_ENERGY_AVG_POINTS + " ");
+        System.out.print(" AVG_POINTS: " + NUM_ENERGY_AVG_POINTS + " \n");
         energies = new ArrayDeque<>(NUM_ENERGY_AVG_POINTS);
     }
 
@@ -170,7 +171,7 @@ public abstract class Ensemble implements IEnsemble {
      * sets average potential from file or resets it to zero
      */
     private void initEnergy() {
-        resetPotential();
+
         if (avgEnergy == 0) {
             calcEnergy();
             averageEnergy();
@@ -271,17 +272,6 @@ public abstract class Ensemble implements IEnsemble {
         avgEnergy = enrg / energies.size();
     }
 
-    private final void resetPotential() {
-        double newEn = 0;
-        for (int i = 0; i < numPart; i++) {
-            for (int j = i + 1; j < numPart; j++) {
-                newEn = newEn + getPotential(i, j);
-            }
-        }
-
-        potential = newEn;
-    }
-
     private final double getCurrentEnergy() {
         double newEn = 0;
         for (int i = 0; i < numPart; i++) {
@@ -352,13 +342,13 @@ public abstract class Ensemble implements IEnsemble {
     protected abstract double getEnergy(double r, boolean attraction);
 
     final double dSquared(double dx, double dy, double dz) {
-        dx = dSquared(dx);
-        dy = dSquared(dy);
-        dz = dSquared(dz);
+        dx = fit2box(dx);
+        dy = fit2box(dy);
+        dz = fit2box(dz);
         return ((dx * dx) + (dy * dy) + (dz * dz));
     }
 
-    private final double dSquared(double dx) {
+    private final double fit2box(double dx) {
         dx = abs(dx);
         return (dx > halfBox) ? (halfBox - dx % halfBox) : dx;
     }
@@ -526,7 +516,6 @@ public abstract class Ensemble implements IEnsemble {
                     saveCorrelation();
                     saveState();
                     if (saveLongTail) saveLongTail();
-                    //resetPotential(); // TODO: may be removed, just in case for cleaning up potential
                 }
 
                 i++;
@@ -631,7 +620,6 @@ public abstract class Ensemble implements IEnsemble {
         Xs[which] = xTrial;
         Ys[which] = yTrial;
         Zs[which] = zTrial;
-        potential = potential + deltaE;
     }
 
     /**

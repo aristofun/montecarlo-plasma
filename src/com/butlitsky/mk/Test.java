@@ -15,14 +15,14 @@ public class Test {
         System.out.println("Testing double pow() ");
 
 
-        double f = - 12E118;
+        double f = -12E118;
         double q = f;
         // heatup
         for (int i = 0; i < 1000000; i++) {
-            q += Math.pow(i*0.0007, i*0.000003);
-            q -= 2* FastMath.pow(i*0.0007, i*0.000003);
-            q += StrictMath.pow(i*0.0007, i*0.000003);
-            q += Math.exp(i*0.0000007) - FastMath.exp(i*0.0000007) + StrictMath.exp(i*0.0000007);
+            q += Math.pow(i * 0.0007, i * 0.000003);
+            q -= 2 * FastMath.pow(i * 0.0007, i * 0.000003);
+            q += StrictMath.pow(i * 0.0007, i * 0.000003);
+            q += Math.exp(i * 0.0000007) - FastMath.exp(i * 0.0000007) + StrictMath.exp(i * 0.0000007);
         }
 
 // -------------------- Math -----------------
@@ -30,9 +30,9 @@ public class Test {
 
         long ms = System.currentTimeMillis();
         for (int i = 0; i < 10000000; i++) {
-            f += Math.pow(i*0.0007, i*0.000003);
+            f += Math.pow(i * 0.0007, i * 0.000003);
         }
-        System.out.print("" + (double)(System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
+        System.out.print("" + (double) (System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
 
         Thread.sleep(1000);
 
@@ -40,12 +40,12 @@ public class Test {
         System.out.println("\n  FastMath: ");
 
         ms = System.currentTimeMillis();
-        f = - 12E118;
+        f = -12E118;
 
         for (int i = 0; i < 10000000; i++) {
             f += FastMath.pow(i * 0.0007, i * 0.000003);
         }
-        System.out.print("" + (double)(System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
+        System.out.print("" + (double) (System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
 
         Thread.sleep(1000);
 
@@ -53,15 +53,33 @@ public class Test {
         System.out.println("\n  StrictMath: ");
 
         ms = System.currentTimeMillis();
-        f = - 12E118;
+        f = -12E118;
 
         for (int i = 0; i < 10000000; i++) {
             f += StrictMath.pow(i * 0.0007, i * 0.000003);
         }
-        System.out.print("" + (double)(System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
-
+        System.out.print("" + (double) (System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
         Thread.sleep(1000);
+        System.out.println("\nfinished\n");
 
+
+        System.out.println("Testing % and Math.IEEERemainder");
+        System.out.println("%");
+        ms = System.currentTimeMillis();
+        f = -12E118;
+        for (int i = 0; i < 10000000; i++) {
+            f += (i) % (i + 3.1);
+        }
+        System.out.println("" + (double) (System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
+
+        System.out.println("Math.IEEERemainder");
+        ms = System.currentTimeMillis();
+        f = -12E118;
+        for (int i = 0; i < 10000000; i++) {
+            f += Math.IEEEremainder(i, i + 3.1);
+        }
+        System.out.print("" + (double) (System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
+        Thread.sleep(1000);
         System.out.println("\nfinished\n");
 
 
@@ -71,12 +89,12 @@ public class Test {
         System.out.println("  Math: ");
 
         ms = System.currentTimeMillis();
-        f = - 12E20;
+        f = -12E20;
 
         for (int i = 0; i < 100000000; i++) {
-            f += Math.exp(i*0.0000007);
+            f += Math.exp(i * 0.0000007);
         }
-        System.out.print("" + (double)(System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
+        System.out.print("" + (double) (System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
 
         Thread.sleep(1000);
 
@@ -84,12 +102,12 @@ public class Test {
         System.out.println("\n  FastMath: ");
 
         ms = System.currentTimeMillis();
-        f = - 12E20;
+        f = -12E20;
 
         for (int i = 0; i < 100000000; i++) {
-            f += FastMath.exp(i*0.0000007);
+            f += FastMath.exp(i * 0.0000007);
         }
-        System.out.print("" + (double)(System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
+        System.out.print("" + (double) (System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
 
         Thread.sleep(1000);
 
@@ -97,17 +115,16 @@ public class Test {
         System.out.println("\n  StrictMath: ");
 
         ms = System.currentTimeMillis();
-        f = - 12E20;
+        f = -12E20;
 
         for (int i = 0; i < 100000000; i++) {
-            f += StrictMath.exp(i*0.0000007);
+            f += StrictMath.exp(i * 0.0000007);
         }
-        System.out.print("" + (double)(System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
+        System.out.print("" + (double) (System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
 
         Thread.sleep(1000);
 
         System.out.println("\nfinished");
-
 
 
         System.out.println("Testing double sqrt() ");
@@ -116,12 +133,12 @@ public class Test {
         System.out.println("  Math: ");
 
         ms = System.currentTimeMillis();
-        f = - 12E20;
+        f = -12E20;
 
         for (int i = 0; i < 100000000; i++) {
-            f += Math.sqrt(i*0.00007);
+            f += Math.sqrt(i * 0.00007);
         }
-        System.out.print("" + (double)(System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
+        System.out.print("" + (double) (System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
 
         Thread.sleep(1000);
 
@@ -129,12 +146,12 @@ public class Test {
         System.out.println("\n  FastMath: ");
 
         ms = System.currentTimeMillis();
-        f = - 12E20;
+        f = -12E20;
 
         for (int i = 0; i < 100000000; i++) {
-            f += FastMath.sqrt(i*0.00007);
+            f += FastMath.sqrt(i * 0.00007);
         }
-        System.out.print("" + (double)(System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
+        System.out.print("" + (double) (System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
 
         Thread.sleep(1000);
 
@@ -142,12 +159,12 @@ public class Test {
         System.out.println("\n  StrictMath: ");
 
         ms = System.currentTimeMillis();
-        f = - 12E20;
+        f = -12E20;
 
         for (int i = 0; i < 100000000; i++) {
-            f += StrictMath.sqrt(i*0.00007);
+            f += StrictMath.sqrt(i * 0.00007);
         }
-        System.out.print("" + (double)(System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
+        System.out.print("" + (double) (System.currentTimeMillis() - ms) / 1000 + "sec.  f = " + f);
 
         Thread.sleep(1000);
 
