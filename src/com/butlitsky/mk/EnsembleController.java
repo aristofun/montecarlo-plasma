@@ -24,6 +24,8 @@ public class EnsembleController implements IEnsembleController {
      */
     public static int REFRESH_DELAY = 5000;
 
+    public static boolean USE_EWALD = false;
+
     /**
      * may be overriden by CLI options, if zero – max(2, CPUs/2) used
      */
@@ -69,7 +71,7 @@ public class EnsembleController implements IEnsembleController {
 
         // setting main ensembles Lists
         for (EOptions opt : options) {
-            IEnsemble ens = new EnsemblePolochka(opt);
+            IEnsemble ens = (USE_EWALD) ? new EnsemblePolochkaEwald(opt) : new EnsemblePolochka(opt);
             //            IEnsemble ens = new EnsemblePseudoPotential(opt);
             ensembles.add(ens);
             // additional config for continues

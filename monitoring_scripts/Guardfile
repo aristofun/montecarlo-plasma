@@ -1,0 +1,10 @@
+require 'terminal-notifier'
+
+guard :shell do
+  watch /.*/ do |m|
+#    n m[0], 'File Changed'
+     
+    TerminalNotifier.notify('Hello World',  :title => 'Ruby', :subtitle => "#{File.expand_path(m[0])}", :open => "file://#{File.expand_path(m[0])}")
+
+  end
+end

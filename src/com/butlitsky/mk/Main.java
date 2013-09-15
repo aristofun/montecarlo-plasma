@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "3.0";
+    public static final String version = "4.5 _ ewald";
 
     /**
      * <pre>usage: (./runmk.command | runmk.bat) [OPTIONS]
@@ -114,9 +114,16 @@ public class Main {
                 .withDescription("threads status refresh interval (5 sec. default)")
                 .withLongOpt("refresh").create("r");
 
+        Option ewaldDelta = OptionBuilder.withArgName("NUM").hasArg().withDescription("Ewald " +
+                "accuracy delta parameter (0.001 default)").withLongOpt("ewaldelta").create("ewd");
+
+        Option ewaldNcut = OptionBuilder.withArgName("NUM").hasArg().withDescription("Ewald" +
+                "Ncutoff parameter (3 default)").withLongOpt("ewaldn").create("ewn");
+
 
         Options options = new Options();
         options.addOption("h", false, "show this help and exit");
+        options.addOption("ew", false, "use Ewald summation");
         options.addOption(avpoints);
         options.addOption(polka);
         options.addOption(delta);
@@ -124,6 +131,8 @@ public class Main {
         options.addOption(workers);
         options.addOption(particles);
         options.addOption(steps);
+        options.addOption(ewaldDelta);
+        options.addOption(ewaldNcut);
 
         CommandLineParser parser = new BasicParser();
 
@@ -134,6 +143,18 @@ public class Main {
             if (line.hasOption("h")) {
                 // automatically generate the help statement
                 printHelpAndExit(options);
+            }
+
+            if (line.hasOption("ew")) {
+                EnsembleController.USE_EWALD = true;
+                System.out.println("EWALD calculations!");
+
+                if (line.hasOption("ewn")) {
+                    EnsemblePolochkaEwald.Ncutoff = Integer.parseInt(line.getOptionValue("ewn"));
+                }
+                if (line.hasOption("ewd")) {
+                    EnsemblePolochkaEwald.DELTA = Double.parseDouble(line.getOptionValue("ewd"));
+                }
             }
 
             if (line.hasOption("pa")) {

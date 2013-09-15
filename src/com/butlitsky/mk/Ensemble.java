@@ -34,7 +34,7 @@ public abstract class Ensemble implements IEnsemble {
     //    private static final int CALC_ENERGY_INT = 12251;
     private final int AVERAGE_ENERGY_INT;// = 1831;
 
-    private static final int INITIAL_NUM_STEPS = 20;  // how many steps from beginning to ignore
+    private static final int INITIAL_NUM_STEPS = 30;  // how many steps from beginning to ignore
 
     public static double DELTA_FACTOR = -1; //1.5;
 
@@ -47,8 +47,8 @@ public abstract class Ensemble implements IEnsemble {
      */
     public static int DEFAULT_NUM_STEPS = -1;
 
-    private final NumberFormat FORMAT = new DecimalFormat(EOptions.SCIENTIFIC_FORMAT_STR);
-    private final NumberFormat SHORT_FORMAT = new DecimalFormat(EOptions.SHORT_FORMAT_STR);
+    protected final NumberFormat FORMAT = new DecimalFormat(EOptions.SCIENTIFIC_FORMAT_STR);
+    protected final NumberFormat SHORT_FORMAT = new DecimalFormat(EOptions.SHORT_FORMAT_STR);
 
     // ----------  controllers  --------------
     private final EOptions opt;
@@ -84,9 +84,9 @@ public abstract class Ensemble implements IEnsemble {
     private final double[][] corrArray = new double[3][];
     private int corrAverager = 0;
 
-    private final double[] Xs;
-    private final double[] Ys;
-    private final double[] Zs;
+    protected final double[] Xs;
+    protected final double[] Ys;
+    protected final double[] Zs;
 
 //    private double potential = 0;
 
@@ -126,8 +126,9 @@ public abstract class Ensemble implements IEnsemble {
         T = opt.getT();
         myFolder = opt.getFolder();
 
-        System.out.println(myFolder + ": avg dist = " + avgDistance + ", " +
-                "delta = " + maxDelta + ", boxSize = " + boxSize);
+        System.out.print(myFolder + ": avg dist = " + SHORT_FORMAT.format(avgDistance) + ", " +
+                "delta = " + SHORT_FORMAT.format(maxDelta) + ", boxSize = "
+                + SHORT_FORMAT.format(boxSize));
 //        double maxDistance = sqrt(3.0 * boxSize * boxSize) / 1.99;
 
         corrNormirovka = 4. * (boxSize * boxSize * boxSize) / (numPart * numPart);
@@ -152,7 +153,7 @@ public abstract class Ensemble implements IEnsemble {
         if (NUM_ENERGY_AVG_POINTS < 0) {
             NUM_ENERGY_AVG_POINTS = numSteps - INITIAL_NUM_STEPS * numPart;
         }
-        System.out.print(" AVG_POINTS: " + NUM_ENERGY_AVG_POINTS + " \n");
+        System.out.print(", AVG_POINTS: " + NUM_ENERGY_AVG_POINTS);
         energies = new ArrayDeque<>(NUM_ENERGY_AVG_POINTS);
     }
 
@@ -272,7 +273,7 @@ public abstract class Ensemble implements IEnsemble {
         avgEnergy = enrg / energies.size();
     }
 
-    private final double getCurrentEnergy() {
+    protected double getCurrentEnergy() {
         double newEn = 0;
         for (int i = 0; i < numPart; i++) {
             for (int j = i + 1; j < numPart; j++) {
@@ -341,16 +342,23 @@ public abstract class Ensemble implements IEnsemble {
 
     protected abstract double getEnergy(double r, boolean attraction);
 
-    final double dSquared(double dx, double dy, double dz) {
+    protected final double dSquared(double dx, double dy, double dz) {
         dx = fit2box(dx);
         dy = fit2box(dy);
         dz = fit2box(dz);
         return ((dx * dx) + (dy * dy) + (dz * dz));
     }
 
-    private final double fit2box(double dx) {
-        dx = abs(dx);
-        return (dx > halfBox) ? (halfBox - dx % halfBox) : dx;
+    protected final double fit2box(double dx) {
+//        dx = abs(dx);
+//        return (dx > halfBox) ? (halfBox - dx % halfBox) : dx;
+        if (dx > halfBox) {
+            dx -= boxSize;
+        } else if (dx < - halfBox){
+            dx += boxSize;
+        }
+
+        return dx;
     }
 
     /**
@@ -510,12 +518,12 @@ public abstract class Ensemble implements IEnsemble {
 
                 if (i % AVERAGE_ENERGY_INT == 0) {
                     averageEnergy();
+                    if (saveLongTail) saveLongTail();
                 }
 
                 if (i % SAVE_CONFIG_N_CORR_INT == 0) {
                     saveCorrelation();
                     saveState();
-                    if (saveLongTail) saveLongTail();
                 }
 
                 i++;
@@ -666,6 +674,10 @@ public abstract class Ensemble implements IEnsemble {
 //            return ret;
 //        }
 // OLD code:   (coord - boxSize * (long) (coord * 2 / boxSize - 1));
+    }
+
+    protected double getBoxSize() {
+        return boxSize;
     }
 
     @Override

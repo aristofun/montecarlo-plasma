@@ -11,11 +11,15 @@ public class EnsemblePolochka extends Ensemble {
      */
     public static double EPSILON = 4.0;
 
+    public static final double El = 4.80320427E-10;
+
     private final double myEpsilon;
 
     public EnsemblePolochka(EOptions options) {
         super(options);
         myEpsilon = EPSILON;
+
+        System.out.print(" polochka size = " + SHORT_FORMAT.format(315775.01611746440408 / (T * myEpsilon)) + "\n");
         initialize();
     }
 
@@ -25,8 +29,10 @@ public class EnsemblePolochka extends Ensemble {
      * Bohr (cm) = 5,2917721092e-9
      * k (in SGS) = 1,3806488 e-16
      *
-     * => converted potential coeff. = e^2 / 7,30607881244045 * (e+5) = 3,
-     * 15775016117465 e+5 = e+6/ 3,1668116505709 = 315775,01611746440408
+     * U = e^2 / (r * Bohr * k)
+     *
+     * => converted potential coeff. = e^2 / 7,30607881244045 * (e+5) =
+     * 3,15775016117465 e+5 = e+6/ 3,1668116505709 = 315775,01611746440408
      * */
     protected final double getPotential(double r, boolean attraction) {
 
@@ -55,4 +61,6 @@ public class EnsemblePolochka extends Ensemble {
             return getPotential(r, attraction);
         }
     }
+
+
 }
