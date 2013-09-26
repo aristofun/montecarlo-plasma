@@ -24,11 +24,7 @@ public class EnsemblePolochkaEwald extends EnsemblePolochka {
      */
     public static int Ncutoff = 3;
 
-    /**
-     * scaling factor to convert energy value to kT units
-     * SCALE_FACTOR == e^2 / (Bohr * k)
-     */
-    private static final double SCALE_FACTOR = 315775.01611746440408;
+
     private static boolean notPrinted = true;
 
     private final double myDelta;
@@ -39,7 +35,7 @@ public class EnsemblePolochkaEwald extends EnsemblePolochka {
 
 
     public EnsemblePolochkaEwald(EOptions options) {
-        super(options);
+        super(options,false);
         myDelta = DELTA;
         myNcutoff = Ncutoff;
         myAlpha = PI * myNcutoff / (getBoxSize() * sqrt(-log(myDelta)));
@@ -48,6 +44,7 @@ public class EnsemblePolochkaEwald extends EnsemblePolochka {
         myUself = Uself();
 
         printStat(myDelta, myNcutoff, myAlpha, myAlpha * getBoxSize(), myRcut / getBoxSize());
+        initialize();
     }
 
     private static void printStat(double delta, int ncutoff, double alpha, double alphaL, double rcut) {

@@ -24,7 +24,12 @@ public class EnsembleController implements IEnsembleController {
      */
     public static int REFRESH_DELAY = 5000;
 
-    public static boolean USE_EWALD = false;
+    /**
+     * 0 – default Polochka, no long range account
+     * 1 – basic Ewald summation
+     * 2 – Harrison algorithm
+     */
+    public static int ENS_TYPE = 0;
 
     /**
      * may be overriden by CLI options, if zero – max(2, CPUs/2) used
@@ -71,8 +76,20 @@ public class EnsembleController implements IEnsembleController {
 
         // setting main ensembles Lists
         for (EOptions opt : options) {
-            IEnsemble ens = (USE_EWALD) ? new EnsemblePolochkaEwald(opt) : new EnsemblePolochka(opt);
-            //            IEnsemble ens = new EnsemblePseudoPotential(opt);
+            IEnsemble ens;
+
+            switch (ENS_TYPE) {
+                case 1:
+                    ens = new EnsemblePolochkaEwald(opt);
+                    break;
+                case 2:
+                    ens = new EnsemblePolochkaHarrison(opt);
+                    break;
+                default:
+                    ens = new EnsemblePolochka(opt, true);
+                    break;
+            }
+
             ensembles.add(ens);
             // additional config for continues
             opt.setOld(true);

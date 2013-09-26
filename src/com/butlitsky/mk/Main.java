@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "4.5 _ ewald";
+    public static final String version = "5.5 _ Harrison no Q compensation";
 
     /**
      * <pre>usage: (./runmk.command | runmk.bat) [OPTIONS]
@@ -120,6 +120,9 @@ public class Main {
         Option ewaldNcut = OptionBuilder.withArgName("NUM").hasArg().withDescription("Ewald" +
                 "Ncutoff parameter (3 default)").withLongOpt("ewaldn").create("ewn");
 
+        Option harrisR = OptionBuilder.withArgName("NUM").hasArg().withDescription("Harris " +
+                "radius. When set Harris algorithm used with given R in L (5 default)")
+                .withLongOpt("harris").create("harris");
 
         Options options = new Options();
         options.addOption("h", false, "show this help and exit");
@@ -133,6 +136,7 @@ public class Main {
         options.addOption(steps);
         options.addOption(ewaldDelta);
         options.addOption(ewaldNcut);
+        options.addOption(harrisR);
 
         CommandLineParser parser = new BasicParser();
 
@@ -146,7 +150,7 @@ public class Main {
             }
 
             if (line.hasOption("ew")) {
-                EnsembleController.USE_EWALD = true;
+                EnsembleController.ENS_TYPE = 1;
                 System.out.println("EWALD calculations!");
 
                 if (line.hasOption("ewn")) {
@@ -156,6 +160,16 @@ public class Main {
                     EnsemblePolochkaEwald.DELTA = Double.parseDouble(line.getOptionValue("ewd"));
                 }
             }
+
+            if (line.hasOption("harris")) {
+                EnsembleController.ENS_TYPE = 2;
+                System.out.println("Harrison calculations!")
+                ;
+                EnsemblePolochkaHarrison.N
+                        = Integer.parseInt(line.getOptionValue("harris"));
+                System.out.println("Harrison R = " + EnsemblePolochkaHarrison.N + "");
+            }
+
 
             if (line.hasOption("pa")) {
                 Ensemble.DEFAULT_NUM_PARTICLES = Integer.parseInt(line.getOptionValue("pa"));
@@ -187,7 +201,6 @@ public class Main {
                 System.out.println("Custom delta X = " + Ensemble.DELTA_FACTOR);
             }
 
-
             if (line.hasOption("r")) {
                 EnsembleController.REFRESH_DELAY
                         = 1000 * Integer.parseInt(line.getOptionValue("refresh"));
@@ -199,7 +212,6 @@ public class Main {
                         = Integer.parseInt(line.getOptionValue("ap"));
             }
             System.out.println("Avg. points = " + Ensemble.NUM_ENERGY_AVG_POINTS);
-
         } catch (Exception exp) {
             // oops, something went wrong
             System.err.println("Parsing failed, using defaults  Reason: " + exp.getMessage());

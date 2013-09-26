@@ -612,19 +612,19 @@ public abstract class Ensemble implements IEnsemble {
             // compare the transition probability with random
             // All energies are in kT
             if (exp(-deltaE) >= localRnd.nextDouble(1.0)) {
-                acceptTrial(deltaE);
+                acceptTrial();
                 return true;
             }
             // potential decreased, accept configuration
         } else {
-            acceptTrial(deltaE);
+            acceptTrial();
             return true;
         }
 
         return false;
     }
 
-    private final void acceptTrial(double deltaE) {
+    private final void acceptTrial() {
         Xs[which] = xTrial;
         Ys[which] = yTrial;
         Zs[which] = zTrial;

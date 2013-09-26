@@ -13,14 +13,20 @@ public class EnsemblePolochka extends Ensemble {
 
     public static final double El = 4.80320427E-10;
 
-    private final double myEpsilon;
+    /**
+     * scaling factor to convert energy value to kT units
+     * SCALE_FACTOR == e^2 / (Bohr * k)
+     */
+    public static final double SCALE_FACTOR = 315775.01611746440408;
 
-    public EnsemblePolochka(EOptions options) {
+    protected final double myEpsilon;
+
+    public EnsemblePolochka(EOptions options, boolean runinit) {
         super(options);
         myEpsilon = EPSILON;
 
-        System.out.print(" polochka size = " + SHORT_FORMAT.format(315775.01611746440408 / (T * myEpsilon)) + "\n");
-        initialize();
+        System.out.print(" polochka size = " + SHORT_FORMAT.format(SCALE_FACTOR / (T * myEpsilon)) + "\n");
+        if (runinit) initialize();
     }
 
     @Override
@@ -38,24 +44,24 @@ public class EnsemblePolochka extends Ensemble {
 
         if (attraction)   // ion-electron
         {
-            if (r < (315775.01611746440408 / (T * myEpsilon)))
+            if (r < (SCALE_FACTOR / (T * myEpsilon)))
                 return (-1 * myEpsilon); //
             else {
-                return (-1 * 315775.01611746440408 / (T * r));
+                return (-1 * SCALE_FACTOR / (T * r));
             }
         } else {
             if (r < 1)  // in Bor's radiuses
                 return getPotential(1, false);
             else
                 // The hard-coded Coloumb energy, always the same.
-                return (315775.01611746440408 / (T * r));
+                return (SCALE_FACTOR / (T * r));
         }
     }
 
     @Override
     protected final double getEnergy(double r, boolean attraction) {
         // – constant potential makes zero contribution to Energy
-        if (attraction && (r < (315775.01611746440408 / (T * myEpsilon)))) {
+        if (attraction && (r < (SCALE_FACTOR / (T * myEpsilon)))) {
             return 0;
         } else {
             return getPotential(r, attraction);
