@@ -295,15 +295,15 @@ public abstract class Ensemble implements IEnsemble {
             if (j < (numPart / 2))   // First _num/2 are IONS
             {
                 if (i < (numPart / 2)) // ION-ION
-                    return getPotential(r, false);
+                    return getPotentialAsym(r, false, true);
                 else              // ION - electron
-                    return getPotential(r, true);
+                    return getPotentialAsym(r, false, false);
             } else                   // Last _num/2 are Electrons
             {
                 if (i < (numPart / 2)) // Electron - ION
-                    return getPotential(r, true);
+                    return getPotentialAsym(r, false, false);
                 else              // Electron - Electron
-                    return getPotential(r, false);
+                    return getPotentialAsym(r, true, false);
             }
         }
         return 0;
@@ -319,6 +319,8 @@ public abstract class Ensemble implements IEnsemble {
 
     protected abstract double getPotential(double r, boolean attraction);
 
+    protected abstract double getPotentialAsym(double r, boolean ee, boolean ii);
+
     private final double getEnergy(int i, int j) {
         final double r = StrictMath.sqrt(dSquared(Xs[j] - Xs[i], Ys[j] - Ys[i], Zs[j] - Zs[i]));
 
@@ -326,21 +328,23 @@ public abstract class Ensemble implements IEnsemble {
             if (j < (numPart / 2))   // First _num/2 are IONS
             {
                 if (i < (numPart / 2)) // ION-ION
-                    return getEnergy(r, false);
+                    return getEnergyAsym(r, false, true);
                 else              // ION - electron
-                    return getEnergy(r, true);
+                    return getEnergyAsym(r, false, false);
             } else                   // Last _num/2 are Electrons
             {
                 if (i < (numPart / 2)) // Electron - ION
-                    return getEnergy(r, true);
+                    return getEnergyAsym(r, false, false);
                 else              // Electron - Electron
-                    return getEnergy(r, false);
+                    return getEnergyAsym(r, true, false);
             }
         }
         return 0;
     }
 
     protected abstract double getEnergy(double r, boolean attraction);
+
+    protected abstract double getEnergyAsym(double r, boolean ee, boolean ii);
 
     protected final double dSquared(double dx, double dy, double dz) {
         dx = fit2box(dx);

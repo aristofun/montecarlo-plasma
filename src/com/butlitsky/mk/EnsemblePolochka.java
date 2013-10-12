@@ -1,5 +1,8 @@
 package com.butlitsky.mk;
 
+import static org.apache.commons.math3.util.FastMath.exp;
+import static org.apache.commons.math3.util.FastMath.pow;
+
 /**
  * User: aristofun
  * Date: 02.03.13
@@ -57,6 +60,36 @@ public class EnsemblePolochka extends Ensemble {
                 return (SCALE_FACTOR / (T * r));
         }
     }
+
+
+    @Override
+    /**
+     * used to introduce not symmetric i-i & e-e potentials
+     *
+     */
+    protected double getPotentialAsym(double r, boolean ee, boolean ii) {
+        if (ee)
+            return getPotential(r, false) * (1 - exp(-8.35E-4 * r * pow(T, 0.625)));
+
+        if (ii)
+            return getPotential(r, false);
+
+        return getPotential(r, true);
+    }
+
+
+    protected final double getEnergyAsym(double r, boolean ee, boolean ii) {
+        if (ee)
+            return getPotential(r, false)
+                    * (1 - exp(-8.35E-4 * r * pow(T, 0.625)) * (1 - r * (8.35E-4) * pow(T, 0.625) * 0.625));
+
+        if (ii)
+            return getEnergy(r, false);
+
+        return getEnergy(r, true);
+
+    }
+
 
     @Override
     protected final double getEnergy(double r, boolean attraction) {

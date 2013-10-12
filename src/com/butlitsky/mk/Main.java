@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "5.5 _ Harrison no Q compensation";
+    public static final String version = "6.0 _ asymmetric potentials & energy introduced";
 
     /**
      * <pre>usage: (./runmk.command | runmk.bat) [OPTIONS]

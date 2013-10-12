@@ -48,8 +48,18 @@ public class EnsemblePseudoPotential extends Ensemble {
     }
 
     @Override
+    protected double getPotentialAsym(double r, boolean ee, boolean ii) {
+        return 0;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
     protected double getEnergy(double r, boolean attraction) {
         return getPotential(r, attraction);
+    }
+
+    @Override
+    protected double getEnergyAsym(double r, boolean ee, boolean ii) {
+        return 0;  //To change body of implemented methods use File | Settings | File Templates.
     }
 
 //    private abstract class PseudoDelegate {
