@@ -94,13 +94,10 @@ public class EnsemblePolochka extends Ensemble {
     @Override
     protected final double getEnergy(double r, boolean attraction) {
         // – constant potential makes zero contribution to Energy
-//        if (attraction && (r < (SCALE_FACTOR / (T * myEpsilon)))) {
-// XXX: calcucalte potential instead of energy!
-//            return 0;
-//        } else {
+        if (attraction && (r < (SCALE_FACTOR / (T * myEpsilon)))) {
+            return 0;
+        } else {
             return getPotential(r, attraction);
-//        }
+        }
     }
-
-
 }

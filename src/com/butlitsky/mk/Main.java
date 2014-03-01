@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "6.1 _ XXX calc total potential instead of energy!";
+    public static final String version = "6.2 _";
 
     /**
      * <pre>usage: (./runmk.command | runmk.bat) [OPTIONS]
