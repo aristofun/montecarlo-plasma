@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "6.0 _ asymmetric potentials & energy introduced";
+    public static final String version = "6.1 _ XXX calc total potential instead of energy!";
 
     /**
      * <pre>usage: (./runmk.command | runmk.bat) [OPTIONS]
@@ -93,7 +93,8 @@ public class Main {
                 .create("pa");
 
         Option avpoints = OptionBuilder.withArgName("NUM").hasArg().withDescription("number of " +
-                "averaging points for Energy (128 default)").withLongOpt("avpoints")
+                "averaging points for Energy (default is number of total steps!)").withLongOpt
+                ("avpoints")
                 .create("ap");
 
         Option steps = OptionBuilder.withArgName("NUM").hasArg().withDescription("number of " +
