@@ -7,17 +7,31 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "6.2 _";
+    public static final String version = "7.4 – pseudo potential 100K, lvl 10-30";
 
     /**
-     * <pre>usage: (./runmk.command | runmk.bat) [OPTIONS]
-     * -d,--delta <DELTA_FACTOR>   maxDx coeff. (1.5 default)
-     * -h                          show this help and exit
-     * -pa,--particles <NUM>       number of particles, if set all mk_config.ini options ignored
-     * -stp,--steps <NUM>          number of total steps, if set all mk_config.ini options ignored
-     * -po,--polka <POLKA>         polochka parameter value (2.0 default)
-     * -r,--refresh <SECONDS>      threads status refresh interval (30 sec. default)
-     * -w,--workers <NUM>          number of parallel threads (default is MAX(2, CPUs/2)
+     * <pre>
+     * usage: (./runmk.command | runmk.bat) [OPTIONS]
+     *  -ap,--avpoints <NUM>        number of averaging points for Energy (default is number of total steps!)
+     *  -d,--delta <DELTA_FACTOR>   maxDx coeff. (overrides .ini parameters if set)
+     *      – zero equals  1. x BOX SIZE
+     *      – if float number >= 1 trial shift delta position == this number * average distance
+     * between particles (depends on density) along every axis.
+     *      – if float number < 1 trial shift delta is this fraction of a box size along each
+     *        axis (i. e. 0.5 means trial particle shifts to half of box size along each axis).
+     *  -ew                         use Ewald summation
+     *  -ewd,--ewaldelta <NUM>      Ewald accuracy delta parameter (0.001 default)
+     *  -ewn,--ewaldn <NUM>         EwaldNcutoff parameter (3 default)
+     *  -h                          show this help and exit
+     *  -harris,--harris <NUM>      Harris radius. When set Harris algorithm used with given R in
+     *  L (5 default)
+     *  -pseudo                     Use pseudo potential ensemble, all polochka parameters ignored
+     *  -pa,--particles <NUM>       number of particles, if set all mk_config.ini options ignored
+     *  -po,--polka <POLKA>         polochka parameter value (2.0 default)
+     *  -r,--refresh <SECONDS>      threads status refresh interval (5 sec. default)
+     *  -stp,--steps <NUM>          number of steps (x Number of Particles),
+     *  if set all mk_config.ini options ignored
+     *  -w,--workers <NUM>          number of parallel threads, default is MAX(2, CPUs/2)
      * </pre>
      */
     public static void main(String[] args) {
@@ -79,8 +93,9 @@ public class Main {
     }
 
     private static void parseArgs(String[] args) {
-//        Option temp = OptionBuilder.withArgName("TEMP").hasArg().withDescription("temperature " +
-//                "for polochka (1K default)").withLongOpt("temp").create("t");
+        Option temp = OptionBuilder.withArgName("TEMP").hasArg().withDescription("temperature " +
+                "for any ensemble type (overrides mk_config.ini, no default value)")
+                .withLongOpt("temp").create("t");
 
         Option polka = OptionBuilder.withArgName("POLKA").hasArg().withDescription("polochka " +
                 "parameter value (2.0 default)").withLongOpt("polka").create("po");
@@ -128,6 +143,7 @@ public class Main {
         Options options = new Options();
         options.addOption("h", false, "show this help and exit");
         options.addOption("ew", false, "use Ewald summation");
+        options.addOption("pseudo", false, "use Pseudopotential");
         options.addOption(avpoints);
         options.addOption(polka);
         options.addOption(delta);
@@ -138,6 +154,7 @@ public class Main {
         options.addOption(ewaldDelta);
         options.addOption(ewaldNcut);
         options.addOption(harrisR);
+        options.addOption(temp);
 
         CommandLineParser parser = new BasicParser();
 
@@ -148,6 +165,11 @@ public class Main {
             if (line.hasOption("h")) {
                 // automatically generate the help statement
                 printHelpAndExit(options);
+            }
+
+            if (line.hasOption("pseudo")) {
+                EnsembleController.ENS_TYPE = 3;
+                System.out.println("PSEUDO potential");
             }
 
             if (line.hasOption("ew")) {
@@ -173,13 +195,13 @@ public class Main {
 
 
             if (line.hasOption("pa")) {
-                Ensemble.DEFAULT_NUM_PARTICLES = Integer.parseInt(line.getOptionValue("pa"));
-                System.out.println("Custom particles number = " + Ensemble.DEFAULT_NUM_PARTICLES);
+                EnsembleController.DEFAULT_NUM_PARTICLES = Integer.parseInt(line.getOptionValue("pa"));
+                System.out.println("Custom particles number = " + EnsembleController.DEFAULT_NUM_PARTICLES);
             }
 
             if (line.hasOption("stp")) {
-                Ensemble.DEFAULT_NUM_STEPS = Integer.parseInt(line.getOptionValue("stp"));
-                System.out.println("Custom steps number = " + Ensemble.DEFAULT_NUM_STEPS);
+                EnsembleController.DEFAULT_NUM_STEPS = Integer.parseInt(line.getOptionValue("stp"));
+                System.out.println("Custom steps number = " + EnsembleController.DEFAULT_NUM_STEPS);
             }
 
             if (line.hasOption("po")) {
@@ -187,10 +209,9 @@ public class Main {
             }
             System.out.println("Polochka (electron-ion) = - " + EnsemblePolochka.EPSILON);
 
-//            if (line.hasOption("t")) {
-//                EnsemblePolochka.EPSILON = Double.parseDouble(line.getOptionValue("polka"));
-//            }
-//            System.out.println("Polochka (electron-ion) = – " + EnsemblePolochka.EPSILON);
+            if (line.hasOption("t")) {
+                EnsembleController.DEFAULT_T = Integer.parseInt(line.getOptionValue("temp"));
+            }
 
             if (line.hasOption("w")) {
                 EnsembleController.NUM_THREADS = Integer.parseInt(line.getOptionValue("workers"));
@@ -198,8 +219,8 @@ public class Main {
             }
 
             if (line.hasOption("d")) {
-                Ensemble.DELTA_FACTOR = Double.parseDouble(line.getOptionValue("delta"));
-                System.out.println("Custom delta X = " + Ensemble.DELTA_FACTOR);
+                EnsembleController.DELTA_FACTOR = Double.parseDouble(line.getOptionValue("delta"));
+                System.out.println("Custom delta X = " + EnsembleController.DELTA_FACTOR);
             }
 
             if (line.hasOption("r")) {

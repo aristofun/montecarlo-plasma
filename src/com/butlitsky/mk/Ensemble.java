@@ -15,7 +15,8 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static com.butlitsky.mk.EnsembleController.getPath;
-import static org.apache.commons.math3.util.FastMath.*;
+import static org.apache.commons.math3.util.FastMath.exp;
+import static org.apache.commons.math3.util.FastMath.pow;
 
 /**
  * total num steps usually
@@ -27,6 +28,11 @@ import static org.apache.commons.math3.util.FastMath.*;
  */
 public abstract class Ensemble implements IEnsemble {
 
+    /**
+     * scaling factor to convert energy value to kT units
+     * SCALE_FACTOR == e^2 / (Bohr * k)
+     */
+    public static final double SCALE_FACTOR = 315775.01611746440408;
     //    private static final int CALC_ENERGY_INT = 72073; // make less for big num part
     private final int SAVE_CONFIG_N_CORR_INT;// = 12287; // make less for big num part
     //    private static final int CALC_CORR_n_ENERGY_INT = 91;
@@ -36,16 +42,6 @@ public abstract class Ensemble implements IEnsemble {
 
     private static final int INITIAL_NUM_STEPS = 30;  // how many steps from beginning to ignore
 
-    public static double DELTA_FACTOR = -1; //1.5;
-
-    /**
-     * overrides specific particle number in ini file if set in CLI options
-     */
-    public static int DEFAULT_NUM_PARTICLES = -1;
-    /**
-     * overrides number of steps for all ensembles
-     */
-    public static int DEFAULT_NUM_STEPS = -1;
 
     protected final NumberFormat FORMAT = new DecimalFormat(EOptions.SCIENTIFIC_FORMAT_STR);
     protected final NumberFormat SHORT_FORMAT = new DecimalFormat(EOptions.SHORT_FORMAT_STR);
@@ -103,7 +99,12 @@ public abstract class Ensemble implements IEnsemble {
         localRnd = ThreadLocalRandom.current();
 
         opt = options;
-        boxSize = pow(opt.getNumParticles() / (2 * opt.getDensity()),
+
+        numPart = opt.getNumParticles();
+        numSteps = opt.getNumSteps() * numPart;
+        T = opt.getT();
+
+        boxSize = pow(numPart / (2 * opt.getDensity()),
                 0.33333333333333333333) / BOHR; // parameter is Ne(Ni),
         // we double 'cause total density is twice bigger
         halfBox = boxSize / 2.0;
@@ -113,23 +114,15 @@ public abstract class Ensemble implements IEnsemble {
 
         // ignore specific delta factor if set to zero
 
-        double factor = (DELTA_FACTOR < 0) ? opt.getMaxDelta() : DELTA_FACTOR;
-        if (factor < 0) factor = abs(factor);
+        double factor = opt.getMaxDelta();
 
-        maxDelta = (factor == 0.0) ?
-                boxSize :
-                ((factor >= 1) ? factor * avgDistance : factor * boxSize);
+        maxDelta = (factor == 0.0) ? boxSize : ((factor >= 1) ? factor * avgDistance : factor * boxSize);
 
-        numPart = (DEFAULT_NUM_PARTICLES < 0) ? opt.getNumParticles() : DEFAULT_NUM_PARTICLES;
-        numSteps = (DEFAULT_NUM_STEPS < 0) ? opt.getNumSteps() * numPart : DEFAULT_NUM_STEPS * numPart;
-
-        T = opt.getT();
         myFolder = opt.getFolder();
 
         System.out.print(myFolder + ": avg dist = " + SHORT_FORMAT.format(avgDistance) + ", " +
                 "delta = " + SHORT_FORMAT.format(maxDelta) + ", boxSize = "
                 + SHORT_FORMAT.format(boxSize));
-//        double maxDistance = sqrt(3.0 * boxSize * boxSize) / 1.99;
 
         corrNormirovka = 4. * (boxSize * boxSize * boxSize) / (numPart * numPart);
         corrDr = StrictMath.sqrt(3.0 * boxSize * boxSize) / 1.99999999999 / (CORR_LENGTH);
@@ -358,7 +351,7 @@ public abstract class Ensemble implements IEnsemble {
 //        return (dx > halfBox) ? (halfBox - dx % halfBox) : dx;
         if (dx > halfBox) {
             dx -= boxSize;
-        } else if (dx < - halfBox){
+        } else if (dx < -halfBox) {
             dx += boxSize;
         }
 
@@ -422,9 +415,9 @@ public abstract class Ensemble implements IEnsemble {
             final double norm = corrNormirovka / (4.0 * Math.PI * r * r * corrDr * corrAverager);
             // writing
             strings.add(FORMAT.format(r) + "\t"
-                    + FORMAT.format(corrArray[0][i] * norm) + "\t"
-                    + FORMAT.format(corrArray[1][i] * norm) + "\t"
-                    + FORMAT.format(corrArray[2][i] * norm) + "\t"
+                            + FORMAT.format(corrArray[0][i] * norm) + "\t"
+                            + FORMAT.format(corrArray[1][i] * norm) + "\t"
+                            + FORMAT.format(corrArray[2][i] * norm) + "\t"
             );
         }
 

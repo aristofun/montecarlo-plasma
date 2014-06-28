@@ -12,6 +12,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static java.lang.Math.abs;
 import static java.lang.Thread.sleep;
 
 /**
@@ -28,6 +29,7 @@ public class EnsembleController implements IEnsembleController {
      * 0 – default Polochka, no long range account
      * 1 – basic Ewald summation
      * 2 – Harrison algorithm
+     * 3 – Pseudo Potential
      */
     public static int ENS_TYPE = 0;
 
@@ -37,6 +39,17 @@ public class EnsembleController implements IEnsembleController {
     public static int NUM_THREADS = 0;
 
     private static final int DRAW_STATUS_INT = 1;
+    public static double DELTA_FACTOR = -1; //1.5;
+    /**
+     * overrides specific particle number in ini file if set in CLI options
+     */
+    public static int DEFAULT_NUM_PARTICLES = -1;
+    /**
+     * overrides number of steps for all ensembles
+     */
+    public static int DEFAULT_NUM_STEPS = -1;
+    /** temperature to be overriden by command line options */
+    public static int DEFAULT_T = -1;
     private volatile boolean running = true;
 
     private static final String CONFIG_FILE = "mk_config.ini";
@@ -84,6 +97,9 @@ public class EnsembleController implements IEnsembleController {
                     break;
                 case 2:
                     ens = new EnsemblePolochkaHarrison(opt);
+                    break;
+                case 3:
+                    ens = new EnsemblePseudoPotential(opt);
                     break;
                 default:
                     ens = new EnsemblePolochka(opt, true);
@@ -173,7 +189,7 @@ public class EnsembleController implements IEnsembleController {
 
         System.out.println("\n\n"); // clear screen
         System.out.println("Polochka: -" + EnsemblePolochka.EPSILON
-                + ", delta: " + Ensemble.DELTA_FACTOR + ", refresh: "
+                + ", delta: " + DELTA_FACTOR + ", refresh: "
                 + EnsembleController.REFRESH_DELAY / 1000 + ", workers: "
                 + EnsembleController.NUM_THREADS);
         System.out.println("---------------------------------------------------------");
@@ -273,7 +289,7 @@ public class EnsembleController implements IEnsembleController {
             do {
                 line = bufRead.readLine();
                 if (line != null && !line.trim().startsWith("#") && !line.trim().equals(""))
-                    opts.add(EOptions.fromLine(line.trim()));
+                    opts.add(fromLine(line.trim()));
 
             } while (line != null);
 
@@ -289,6 +305,28 @@ public class EnsembleController implements IEnsembleController {
         opts.remove(null); // just in case of blank EnsembleOptions were added
 
         return opts;
+    }
+
+    private EOptions fromLine(String line) {
+
+        Scanner s = new Scanner(line);
+        //# T, Density, maxDx/y/z, numParticles, numSteps, strategy (not used yet), isOld
+        int t = s.nextInt();
+        double density = s.nextDouble();
+        double delta = s.nextDouble();
+        int numPart = s.nextInt();
+        int numSteps = s.nextInt();
+        int strategy = s.nextInt();
+        boolean isOld = s.nextBoolean();
+
+        return new EOptions(
+                (DEFAULT_T < 0) ? abs(t) : DEFAULT_T, // T
+                abs(density),    // density
+                (DELTA_FACTOR < 0) ? abs(delta) : DELTA_FACTOR, // delta
+                (DEFAULT_NUM_PARTICLES < 0) ? numPart : DEFAULT_NUM_PARTICLES, // numPart
+                (DEFAULT_NUM_STEPS < 0) ? numSteps: DEFAULT_NUM_STEPS,      // numSteps
+                abs(strategy),       // strategy
+                isOld);       // isOld
     }
 
 }

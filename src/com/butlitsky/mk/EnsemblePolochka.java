@@ -1,8 +1,5 @@
 package com.butlitsky.mk;
 
-import static org.apache.commons.math3.util.FastMath.exp;
-import static org.apache.commons.math3.util.FastMath.pow;
-
 /**
  * User: aristofun
  * Date: 02.03.13
@@ -13,14 +10,6 @@ public class EnsemblePolochka extends Ensemble {
      * polochka deepness in kT
      */
     public static double EPSILON = 4.0;
-
-    public static final double El = 4.80320427E-10;
-
-    /**
-     * scaling factor to convert energy value to kT units
-     * SCALE_FACTOR == e^2 / (Bohr * k)
-     */
-    public static final double SCALE_FACTOR = 315775.01611746440408;
 
     protected final double myEpsilon;
 
@@ -68,26 +57,29 @@ public class EnsemblePolochka extends Ensemble {
      *
      */
     protected double getPotentialAsym(double r, boolean ee, boolean ii) {
-        if (ee)
-            return getPotential(r, false) * (1 - exp(-8.35E-4 * r * pow(T, 0.625)));
-
-        if (ii)
+//  Barker approx.
+//        if (ee)
+//            return getPotential(r, false) * (1 - exp(-8.35E-4 * r * pow(T, 0.625)));
+//
+//        if (ii)
+        if (ee || ii)
             return getPotential(r, false);
-
-        return getPotential(r, true);
+        else
+            return getPotential(r, true);
     }
 
 
     protected final double getEnergyAsym(double r, boolean ee, boolean ii) {
-        if (ee)
-            return getPotential(r, false)
-                    * (1 - exp(-8.35E-4 * r * pow(T, 0.625)) * (1 - r * (8.35E-4) * pow(T, 0.625) * 0.625));
-
-        if (ii)
+// Barker approx.
+//        if (ee)
+//            return getPotential(r, false)
+//                    * (1 - exp(-8.35E-4 * r * pow(T, 0.625)) * (1 - r * (8.35E-4) * pow(T, 0.625) * 0.625));
+//
+//        if (ii)
+        if (ee || ii)
             return getEnergy(r, false);
-
-        return getEnergy(r, true);
-
+        else
+            return getEnergy(r, true);
     }
 
 

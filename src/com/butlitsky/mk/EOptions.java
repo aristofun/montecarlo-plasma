@@ -41,15 +41,9 @@ public class EOptions implements CharSequence {
         T = t;
         isOld = old;
 
-        gamma = e * e * pow(density, 0.333333333333333) / (k * T);
+        gamma = e * e * pow(2 * density, 0.333333333333333) / (k * T);
     }
 
-    public static EOptions fromLine(String line) {
-        Scanner s = new Scanner(line);
-        //# T, Density, maxDx/y/z, numParticles, numSteps, strategy (not used yet), isOld
-        return new EOptions(abs(s.nextInt()), abs(s.nextDouble()), abs(s.nextDouble()),
-                abs(s.nextInt()), abs(s.nextInt()), abs(s.nextInt()), s.nextBoolean());
-    }
 
     public double getDensity() {
         return density;
@@ -84,12 +78,6 @@ public class EOptions implements CharSequence {
         isOld = flag;
     }
 
-    /**
-     * calculates gamma from N * T
-     */
-//    public double getGamma()  {
-//
-//    }
     public boolean equals(Object arg0) {
         if (this == arg0) {
             return true;
