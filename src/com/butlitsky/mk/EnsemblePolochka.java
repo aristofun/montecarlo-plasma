@@ -43,7 +43,7 @@ public class EnsemblePolochka extends Ensemble {
             }
         } else {
             if (r < 1)  // in Bor's radiuses
-                return getPotential(1, false);
+                return getPotential(1, attraction);
             else
                 // The hard-coded Coloumb energy, always the same.
                 return (SCALE_FACTOR / (T * r));

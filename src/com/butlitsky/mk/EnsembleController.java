@@ -38,7 +38,7 @@ public class EnsembleController implements IEnsembleController {
      */
     public static int NUM_THREADS = 0;
 
-    private static final int DRAW_STATUS_INT = 1;
+    private static final int DRAW_STATUS_INT = 5;
     public static double DELTA_FACTOR = -1; //1.5;
     /**
      * overrides specific particle number in ini file if set in CLI options
@@ -48,7 +48,9 @@ public class EnsembleController implements IEnsembleController {
      * overrides number of steps for all ensembles
      */
     public static int DEFAULT_NUM_STEPS = -1;
-    /** temperature to be overriden by command line options */
+    /**
+     * temperature to be overriden by command line options
+     */
     public static int DEFAULT_T = -1;
     private volatile boolean running = true;
 
@@ -122,9 +124,10 @@ public class EnsembleController implements IEnsembleController {
     }
 
     @Override
-    public void stop() {
-        if (!running) return;
+    public synchronized void stop() {
+        notify();
 
+        if (!running) return;
         running = false;
 
         System.out.println("Somebody stopping controller...");
@@ -136,7 +139,7 @@ public class EnsembleController implements IEnsembleController {
         System.out.println("Controler with " + ensembles.size() + " threads stopped. Thank you.");
     }
 
-    public void start() throws InterruptedException {
+    public synchronized void start() throws InterruptedException {
         if (!running) return;
 
         System.out.println("Starting " + ensembles.size() + " ensembles' threads... ");
@@ -156,7 +159,6 @@ public class EnsembleController implements IEnsembleController {
         drawStatus();
 
         while (running) {
-            sleep(REFRESH_DELAY);
 
             // heavy status reports (saving energies & plots)
             if (i % DRAW_STATUS_INT == 0) drawStatus();
@@ -164,6 +166,8 @@ public class EnsembleController implements IEnsembleController {
 
             refreshStatus();
             i++;
+
+            wait(REFRESH_DELAY);
         }
 
         drawStatus();
@@ -244,8 +248,8 @@ public class EnsembleController implements IEnsembleController {
         boolean currentRunning = states.get(current).booleanValue();
         String energyes = getSimpleEnergiesString(current);
         System.out.println(current.getFolder() + "\t#" + current.getCurrStep() +
-                " (" + 100 * (current.getCurrStep() + 1) / current.getNumSteps() + "%)" +
-                "\t[" + energyes + "]\t" + (currentRunning ? "" : " finished"));
+                " (" + (int) (100 * ((float) current.getCurrStep() + 1) / current.getNumSteps())
+                + "%)" + "\t[" + energyes + "]\t" + (currentRunning ? "" : " finished"));
     }
 
     private void refreshEnergy(IEnsemble current) {
@@ -324,7 +328,7 @@ public class EnsembleController implements IEnsembleController {
                 abs(density),    // density
                 (DELTA_FACTOR < 0) ? abs(delta) : DELTA_FACTOR, // delta
                 (DEFAULT_NUM_PARTICLES < 0) ? numPart : DEFAULT_NUM_PARTICLES, // numPart
-                (DEFAULT_NUM_STEPS < 0) ? numSteps: DEFAULT_NUM_STEPS,      // numSteps
+                (DEFAULT_NUM_STEPS < 0) ? numSteps : DEFAULT_NUM_STEPS,      // numSteps
                 abs(strategy),       // strategy
                 isOld);       // isOld
     }

@@ -15,8 +15,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static com.butlitsky.mk.EnsembleController.getPath;
-import static org.apache.commons.math3.util.FastMath.exp;
-import static org.apache.commons.math3.util.FastMath.pow;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * total num steps usually
@@ -40,8 +39,9 @@ public abstract class Ensemble implements IEnsemble {
     //    private static final int CALC_ENERGY_INT = 12251;
     private final int AVERAGE_ENERGY_INT;// = 1831;
 
-    private static final int INITIAL_NUM_STEPS = 30;  // how many steps from beginning to ignore
+    public static int INITIAL_NUM_STEPS = 50;  // how many steps from beginning to ignore
 
+    public static boolean START_FROM_FCC = false;
 
     protected final NumberFormat FORMAT = new DecimalFormat(EOptions.SCIENTIFIC_FORMAT_STR);
     protected final NumberFormat SHORT_FORMAT = new DecimalFormat(EOptions.SHORT_FORMAT_STR);
@@ -102,6 +102,7 @@ public abstract class Ensemble implements IEnsemble {
 
         numPart = opt.getNumParticles();
         numSteps = opt.getNumSteps() * numPart;
+
         T = opt.getT();
 
         boxSize = pow(numPart / (2 * opt.getDensity()),
@@ -116,7 +117,8 @@ public abstract class Ensemble implements IEnsemble {
 
         double factor = opt.getMaxDelta();
 
-        maxDelta = (factor == 0.0) ? boxSize : ((factor >= 1) ? factor * avgDistance : factor * boxSize);
+        // new in 8.0 – CLI params always multiplied by avgDistance
+        maxDelta = (factor == 0.0) ? boxSize : factor * avgDistance;
 
         myFolder = opt.getFolder();
 
@@ -138,8 +140,9 @@ public abstract class Ensemble implements IEnsemble {
 
         // OPTIONS first bit == save longtail
         saveLongTail = ((options.getStrategy() & 1) == 1);
+
         // simulation timeframes scaled by number of particles
-        CALC_CORR_INT = numPart;
+        CALC_CORR_INT = (int) numPart / 10 + 1;
         AVERAGE_ENERGY_INT = numPart * 3;
         SAVE_CONFIG_N_CORR_INT = numPart * 5;
 
@@ -221,24 +224,46 @@ public abstract class Ensemble implements IEnsemble {
             }
         }
 
-        if (!opt.isOld()) initRandomState(); // initial distribution, reset counters
+        if (!opt.isOld()) initParticlesPosition(); // initial distribution, reset counters
     }
 
     /**
      * fill random arrays of particles, resetting all counters
      */
-    private void initRandomState() {
+    private void initParticlesPosition() {
         currStep = 0;
 
-        // random configuration.
-        for (int j = 0; j < numPart; j++) {
+        // uniformly distribute particles in the box NaCL structure (fcc)
+        if (START_FROM_FCC) {
+            final int Nx = (int) ceil(Math.cbrt(numPart));
+            final double Lx = boxSize / Nx;
+
+            for (int j = 0; j < numPart; j++) {
+                int xLayer = j / (Nx * Nx);
+                int yLayer = (j % (Nx * Nx)) / Nx;
+                int zLayer = (j % (Nx * Nx)) % Nx;
+
+                if ((j % 2) == 0) { // ion, electron, ion, electron...
+                    Xs[j / 2] = xLayer * Lx;
+                    Ys[j / 2] = yLayer * Lx;
+                    Zs[j / 2] = zLayer * Lx;
+                } else {
+                    Xs[numPart / 2 + j / 2] = xLayer * Lx;
+                    Ys[numPart / 2 + j / 2] = yLayer * Lx;
+                    Zs[numPart / 2 + j / 2] = zLayer * Lx;
+                }
+
+            }
+        } else {
+            // random configuration.
+            for (int j = 0; j < numPart; j++) {
             /* spreading the particles */
-            Xs[j] = myRandom(boxSize);
-            Ys[j] = myRandom(boxSize);
-            Zs[j] = myRandom(boxSize);
+                Xs[j] = myRandom(boxSize);
+                Ys[j] = myRandom(boxSize);
+                Zs[j] = myRandom(boxSize);
+            }
         }
     }
-
 
     /**
      * Record current energy value to averager array
@@ -390,6 +415,7 @@ public abstract class Ensemble implements IEnsemble {
         if (strings.size() != numPart) {
             throw new Exception("file size doesn't fit particles number");
         }
+
 
         for (int i = 0; i < strings.size(); i++) {
             String[] strs = strings.get(i).split("\\s");

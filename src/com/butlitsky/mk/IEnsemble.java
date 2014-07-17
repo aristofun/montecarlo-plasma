@@ -23,7 +23,7 @@ public interface IEnsemble extends Runnable {
     public static final String LONGTAIL_FILE = "all_configs.dat";
     public static final String CORR_FILE = "correlation.dat";
 
-    public static final int CORR_LENGTH = 200;
+    public static final int CORR_LENGTH = 90;
 
     /**
      * current iteration step

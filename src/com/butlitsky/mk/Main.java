@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "7.4 – pseudo potential 100K, lvl 10-30";
+    public static final String version = "8.2 + cubic start + fast stop";
 
     /**
      * <pre>
@@ -39,6 +39,7 @@ public class Main {
         Date start = new Date();
         System.out.println("\nMonte-Karlo game v. " + version + ", (c) Michael Butlitsky 2013\n");
 
+
         /* playground
         Deque<Double> deck = new ArrayDeque<Double>(3);
         deck.addFirst(4.9);
@@ -68,7 +69,7 @@ public class Main {
                 public void run() {
                     controller.stop();
                     try {
-                        Thread.sleep(EnsembleController.REFRESH_DELAY);
+                        Thread.sleep(2000); // 1 sec to wait all finished
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -77,7 +78,6 @@ public class Main {
             });
 
 
-//            controller.saveContinueOptions();
             controller.start();
 
 
@@ -120,10 +120,8 @@ public class Main {
         Option delta = OptionBuilder.withArgName("DELTA_FACTOR").hasArg()
                 .withDescription("maxDx coeff. (overrides .ini parameters if set) \n" +
                         "        – zero equals 1. x BOX SIZE \n" +
-                        "        – if float number >= 1  trial shift delta position == this " +
-                        "number * average distance between particles (depends on density) along every axis.\n" +
-                        "        – if float number < 1 trial shift delta is this fraction of a " +
-                        "box size along each axis (i. e. 0.5 means trial particle shifts to half of box size along each axis). \n")
+                        "        – if float number,  trial shift delta position == this " +
+                        "number * average distance between particles (depends on density) along every axis.\n")
                 .withLongOpt("delta").create("d");
 
         Option refresh = OptionBuilder.withArgName("SECONDS").hasArg()
@@ -140,10 +138,15 @@ public class Main {
                 "radius. When set Harris algorithm used with given R in L (5 default)")
                 .withLongOpt("harris").create("harris");
 
+        Option stepsToPass = OptionBuilder.withArgName("NUM").hasArg().withDescription("Number " +
+                "of steps [times num_part] to ignore in markov chain averages (default 50)")
+                .withLongOpt("inisteps").create("istp");
+
         Options options = new Options();
         options.addOption("h", false, "show this help and exit");
         options.addOption("ew", false, "use Ewald summation");
         options.addOption("pseudo", false, "use Pseudopotential");
+        options.addOption("cubic", false, "use simple cubic start config (randomized by default)");
         options.addOption(avpoints);
         options.addOption(polka);
         options.addOption(delta);
@@ -155,6 +158,7 @@ public class Main {
         options.addOption(ewaldNcut);
         options.addOption(harrisR);
         options.addOption(temp);
+        options.addOption(stepsToPass);
 
         CommandLineParser parser = new BasicParser();
 
@@ -170,6 +174,11 @@ public class Main {
             if (line.hasOption("pseudo")) {
                 EnsembleController.ENS_TYPE = 3;
                 System.out.println("PSEUDO potential");
+            }
+
+            if (line.hasOption("cubic")) { // new in 8.0
+                Ensemble.START_FROM_FCC = true;
+                System.out.println("Initial NaCl fcc cubic");
             }
 
             if (line.hasOption("ew")) {
@@ -221,6 +230,11 @@ public class Main {
             if (line.hasOption("d")) {
                 EnsembleController.DELTA_FACTOR = Double.parseDouble(line.getOptionValue("delta"));
                 System.out.println("Custom delta X = " + EnsembleController.DELTA_FACTOR);
+            }
+
+            if (line.hasOption("inisteps")) { // new in 8.0
+                Ensemble.INITIAL_NUM_STEPS = Integer.parseInt(line.getOptionValue("inisteps"));
+                System.out.println("Custom INITIAL STEPS = " + Ensemble.INITIAL_NUM_STEPS);
             }
 
             if (line.hasOption("r")) {
