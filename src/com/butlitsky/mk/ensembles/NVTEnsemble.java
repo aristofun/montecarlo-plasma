@@ -1,4 +1,8 @@
-package com.butlitsky.mk;
+package com.butlitsky.mk.ensembles;
+
+import com.butlitsky.mk.EnsembleController;
+import com.butlitsky.mk.options.CLOptions;
+import com.butlitsky.mk.options.EOptions;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -6,64 +10,32 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
-import static com.butlitsky.mk.EnsembleController.getPath;
 import static org.apache.commons.math3.util.FastMath.*;
 
 /**
- * total num steps usually
- * 5 mln (500 particles x 10000 steps) to 10 mln (1000 particles x 10000 stps).
- * <p/>
+ * Basic class for all the metropolis abstractions. No assumptions on the ensemble details.
+ * Just Metropolis algorithm.
  * User: aristofun
  * Date: 03.03.13
  * Time: 13:04
  */
-public abstract class Ensemble implements IEnsemble {
+public abstract class NVTEnsemble extends MetropolisEnsemble {
 
-    /**
-     * scaling factor to convert energy value to kT units
-     * SCALE_FACTOR == e^2 / (Bohr * k)
-     */
-    public static final double SCALE_FACTOR = 315775.01611746440408;
-    //    private static final int CALC_ENERGY_INT = 72073; // make less for big num part
-    private final int SAVE_CONFIG_N_CORR_INT;// = 12287; // make less for big num part
-    //    private static final int CALC_CORR_n_ENERGY_INT = 91;
-    private final int CALC_CORR_INT;// = 361275;
-    //    private static final int CALC_ENERGY_INT = 12251;
-    private final int AVERAGE_ENERGY_INT;// = 1831;
-
-    public static int INITIAL_NUM_STEPS = 50;  // how many steps from beginning to ignore
-
-    public static boolean START_FROM_FCC = false;
-
-    protected final NumberFormat FORMAT = new DecimalFormat(EOptions.SCIENTIFIC_FORMAT_STR);
-    protected final NumberFormat SHORT_FORMAT = new DecimalFormat(EOptions.SHORT_FORMAT_STR);
-
-    // ----------  controllers  --------------
-    private final EOptions opt;
-    private final String myFolder;
-
-    private final MersenneTwisterFast rnd;
-    private final ThreadLocalRandom localRnd;
+    private final int avgPoints;
 
     private Path myConfigPath;
     private Path myCorrPath;
-    private volatile boolean finished = false;
+
     private final boolean saveLongTail;
     private BufferedWriter longTailWriter;
 
 
-    // ------------ Monte Karlo --------------
     private final int numPart;
-    private final int numSteps;
-    private int currStep;
     private int which;
     private double xTrial;
     private double yTrial;
@@ -75,6 +47,7 @@ public abstract class Ensemble implements IEnsemble {
     private final double halfBox;
     private final double maxDelta;
 
+    // -–––– correlation stuff ---------------
     private final double corrNormirovka;
     private final double corrDr;
     private final double[][] corrArray = new double[3][];
@@ -84,46 +57,31 @@ public abstract class Ensemble implements IEnsemble {
     protected final double[] Ys;
     protected final double[] Zs;
 
-//    private double potential = 0;
-
-    public static int NUM_ENERGY_AVG_POINTS = -1;
-
     // averaging energies values stack
     private final Deque<Double> energies;
     private double avgEnergy = 0;
-    private double energy = 0;
+    private double currentEnergy = 0;
 
 
-    public Ensemble(EOptions options) {
-        rnd = new MersenneTwisterFast();
-        localRnd = ThreadLocalRandom.current();
-
-        opt = options;
-
+    protected NVTEnsemble(EOptions options) {
+        super(options);
         numPart = opt.getNumParticles();
-        numSteps = opt.getNumSteps() * numPart;
-
         T = opt.getT();
 
         boxSize = pow(numPart / (2 * opt.getDensity()),
                 0.33333333333333333333) / BOHR; // parameter is Ne(Ni),
         // we double 'cause total density is twice bigger
-        halfBox = boxSize / 2.0;
 
+        halfBox = boxSize / 2.0;
         // average e-i distance => x 2
         double avgDistance = pow(2 * opt.getDensity(), -0.3333333333333333333333) / BOHR;
-
-        // ignore specific delta factor if set to zero
-
         double factor = opt.getMaxDelta();
 
         // new in 8.0 – CLI params always multiplied by avgDistance
         maxDelta = (factor == 0.0) ? boxSize : factor * avgDistance;
 
-        myFolder = opt.getFolder();
-
-        System.out.print(myFolder + ": avg dist = " + SHORT_FORMAT.format(avgDistance) + ", " +
-                "delta = " + SHORT_FORMAT.format(maxDelta) + ", boxSize = "
+        System.out.print(myFolder + ": avg.dist=" + SHORT_FORMAT.format(avgDistance) + ", " +
+                "delta=" + SHORT_FORMAT.format(maxDelta) + ", boxSize="
                 + SHORT_FORMAT.format(boxSize));
 
         corrNormirovka = 4. * (boxSize * boxSize * boxSize) / (numPart * numPart);
@@ -140,27 +98,20 @@ public abstract class Ensemble implements IEnsemble {
 
         // OPTIONS first bit == save longtail
         saveLongTail = ((options.getStrategy() & 1) == 1);
+        avgPoints = (CLOptions.NUM_ENERGY_AVG_POINTS < 0) ?
+                getNumSteps() - CLOptions.INITIAL_STEPS : CLOptions.NUM_ENERGY_AVG_POINTS;
+        System.out.print(", AVG.=" + avgPoints);
 
-        // simulation timeframes scaled by number of particles
-        CALC_CORR_INT = (int) numPart / 10 + 1;
-        AVERAGE_ENERGY_INT = numPart * 3;
-        SAVE_CONFIG_N_CORR_INT = numPart * 5;
-
-        if (NUM_ENERGY_AVG_POINTS < 0) {
-            NUM_ENERGY_AVG_POINTS = numSteps - INITIAL_NUM_STEPS * numPart;
-        }
-        System.out.print(", AVG_POINTS: " + NUM_ENERGY_AVG_POINTS);
-        energies = new ArrayDeque<>(NUM_ENERGY_AVG_POINTS);
+        energies = new ArrayDeque<>(avgPoints);
     }
 
     /**
-     * Must be run by children after super constructor. Default strategy – set up initial state from file
-     * or random if failed to read config from disk.
+     * Must be called by children in the end of construction. So Ensemble is ready to run right
+     * after it's successfully created.
      */
-    protected void initialize() {
+    public void loadState() {
         loadFromStateFile();
         initEnergy();
-
         applyAdditionalStrategies();
     }
 
@@ -170,10 +121,10 @@ public abstract class Ensemble implements IEnsemble {
     private void initEnergy() {
 
         if (avgEnergy == 0) {
-            calcEnergy();
+            newEnergyStep();
             averageEnergy();
         } else {
-            energy = avgEnergy;
+            currentEnergy = avgEnergy;
         }
     }
 
@@ -181,7 +132,7 @@ public abstract class Ensemble implements IEnsemble {
     private void applyAdditionalStrategies() {
         if (saveLongTail) {
             try {
-                longTailWriter = Files.newBufferedWriter(getPath(myFolder + "/" + LONGTAIL_FILE),
+                longTailWriter = Files.newBufferedWriter(EnsembleController.getPath(myFolder + "/" + LONGTAIL_FILE),
                         Charset.defaultCharset(), StandardOpenOption.CREATE,
                         opt.isOld() ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING,
                         StandardOpenOption.WRITE);
@@ -195,16 +146,15 @@ public abstract class Ensemble implements IEnsemble {
      * reads config or generates new random if any errors ocurred
      */
     private void loadFromStateFile() {
-        myConfigPath = getPath(myFolder + "/" + STATE_FILE);
-        myCorrPath = getPath(myFolder + "/" + CORR_FILE);
+        myConfigPath = EnsembleController.getPath(myFolder + "/" + STATE_FILE);
+        myCorrPath = EnsembleController.getPath(myFolder + "/" + CORR_FILE);
 
         try {
-            Files.createDirectories(getPath(myFolder));
+            Files.createDirectories(EnsembleController.getPath(myFolder));
         } catch (IOException e) {
             e.printStackTrace();
-            System.out.println("ERROR: can't find " + myFolder + " directory, " +
-                    "worker is dead");
-            finished = true;
+            System.out.println("ERROR: can't find " + myFolder + " directory, worker is dead");
+            stop();
             return;
         }
 
@@ -220,21 +170,23 @@ public abstract class Ensemble implements IEnsemble {
                 }
             } else {
                 opt.setOld(false);
-                System.out.print("! from scratch: " + myFolder + "\t ");
             }
         }
 
-        if (!opt.isOld()) initParticlesPosition(); // initial distribution, reset counters
+        if (!opt.isOld()) {
+            System.out.print("! from scratch");
+            initParticlesPosition(); // initial distribution, reset counters
+        }
+
+        System.out.println();
     }
 
     /**
      * fill random arrays of particles, resetting all counters
      */
     private void initParticlesPosition() {
-        currStep = 0;
-
         // uniformly distribute particles in the box NaCL structure (fcc)
-        if (START_FROM_FCC) {
+        if (CLOptions.START_FROM_FCC) {
             final int Nx = (int) ceil(Math.cbrt(numPart));
             final double Lx = boxSize / Nx;
 
@@ -268,19 +220,16 @@ public abstract class Ensemble implements IEnsemble {
     /**
      * Record current energy value to averager array
      */
-    private final void calcEnergy() {
-        energy = getCurrentEnergy();
-        oldEnergy();
+    private final void newEnergyStep() {
+        currentEnergy = getCurrentEnergy();
+        oldEnergyStep();
     }
 
-    private final void oldEnergy() {
-        if (energies.size() > NUM_ENERGY_AVG_POINTS - 1) energies.pollLast();
-        energies.addFirst(energy);
+    private final void oldEnergyStep() {
+        if (energies.size() > avgPoints - 1) energies.pollLast();
+        energies.addFirst(currentEnergy);
     }
 
-    /**
-     * calculates full system potential from scratch, based on current particles configuration
-     */
     private final void averageEnergy() {
         double enrg = 0.0;
 
@@ -291,6 +240,9 @@ public abstract class Ensemble implements IEnsemble {
         avgEnergy = enrg / energies.size();
     }
 
+    /**
+     * calculates full system potential from scratch, based on current particles configuration
+     */
     protected double getCurrentEnergy() {
         double newEn = 0;
         for (int i = 0; i < numPart; i++) {
@@ -335,8 +287,6 @@ public abstract class Ensemble implements IEnsemble {
         return getPotential(i, j, Xs[j], Ys[j], Zs[j]);
     }
 
-    protected abstract double getPotential(double r, boolean attraction);
-
     protected abstract double getPotentialAsym(double r, boolean ee, boolean ii);
 
     private final double getEnergy(int i, int j) {
@@ -360,8 +310,6 @@ public abstract class Ensemble implements IEnsemble {
         return 0;
     }
 
-    protected abstract double getEnergy(double r, boolean attraction);
-
     protected abstract double getEnergyAsym(double r, boolean ee, boolean ii);
 
     protected final double dSquared(double dx, double dy, double dz) {
@@ -384,38 +332,19 @@ public abstract class Ensemble implements IEnsemble {
     }
 
     /**
-     * random (-1.0; 1.0)
-     */
-    final double myRandom() {
-        return rnd.nextDouble(true, true) * 2.0 - 1.0;
-//        return ((double) rnd.nextInt() / Integer.MAX_VALUE);
-//        return ThreadLocalRandom.current().nextDouble(-1.,1.);
-    }
-
-    /**
-     * returns Mersenne Twister random [0; size) double value
-     */
-    final double myRandom(double size) {
-        return rnd.nextDouble() * size;
-
-//      faster on Core 2 Duo
-//        return size * ((double) rnd.nextInt() / Integer.MAX_VALUE + 1) / 2;
-    }
-
-    /**
      * throws IOException if no valid config could be read
      */
     private void loadArrays(List<String> strings) throws Exception {
         // first line: curr_step potential
         String step_en = strings.remove(0);
         // #step, average potential, ...
-        currStep = Integer.parseInt(step_en.split("\\s+")[0]);
+
+        setCurrStep(Integer.parseInt(step_en.split("\\s+")[0]));
         avgEnergy = Double.parseDouble(step_en.split("\\s+")[1]);
 
         if (strings.size() != numPart) {
             throw new Exception("file size doesn't fit particles number");
         }
-
 
         for (int i = 0; i < strings.size(); i++) {
             String[] strs = strings.get(i).split("\\s");
@@ -423,6 +352,14 @@ public abstract class Ensemble implements IEnsemble {
             Ys[i] = Double.parseDouble(strs[1]);    //
             Zs[i] = Double.parseDouble(strs[2]);    //
         }
+    }
+
+    @Override
+    protected void saveStateOnStop() {
+        saveConfiguration();
+        saveCorrelation();
+        saveLongTail();
+        closeLongTail();
     }
 
     private final void saveCorrelation() {
@@ -455,14 +392,14 @@ public abstract class Ensemble implements IEnsemble {
         }
     }
 
-    void saveState() {
+    protected void saveConfiguration() {
         averageEnergy();
 
         // create strings list from arrays
         try {
             BufferedWriter writer = Files.newBufferedWriter(myConfigPath, Charset.defaultCharset());
 
-            writer.write("" + currStep + "\t"
+            writer.write("" + getCurrStep() + "\t"
                     + FORMAT.format(avgEnergy) + "\t"
                     + SHORT_FORMAT.format(avgEnergy / numPart) + "\t"
                     + SHORT_FORMAT.format(opt.getGamma()));
@@ -484,84 +421,6 @@ public abstract class Ensemble implements IEnsemble {
         }
     }
 
-    @Override
-    public final int getCurrStep() {
-        return currStep;  //To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    /**
-     * new blank thread is running this method until stopped or comes to the numSteps
-     * It quietly stops on any exceptions with message to system out
-     */
-    @Override
-    public void run() {
-        System.out.println();
-        if (currStep >= numSteps || finished) {
-            System.out.print(myFolder + " No run.\t");
-            finished = true;
-            return;
-        }
-
-        int i = currStep;
-
-        // fast run through initial steps, unstable configuration
-        if (currStep < INITIAL_NUM_STEPS * numPart && numSteps > INITIAL_NUM_STEPS * numPart) {
-            System.out.println("Ignoring first " + INITIAL_NUM_STEPS * numPart + " steps...");
-
-            while (i < INITIAL_NUM_STEPS * numPart) {
-                if (finished) {
-                    System.out.print("STOP " + myFolder + ", finished=true\t");
-                    break;
-                }
-                play();
-                i++;
-            }
-        }
-
-        currStep = i;
-
-        if (!finished) {
-            while (i < numSteps) {
-                if (finished) {
-                    System.out.print("STOP " + myFolder + ", finished=true\t");
-                    break;
-                }
-
-                if (play()) {
-                    calcEnergy();
-                    currStep = i;
-                } else {
-                    oldEnergy();
-                }
-
-                if (i % CALC_CORR_INT == 0) { // no need for correlation accuracy
-                    calcCorrelation();
-                }
-
-
-                if (i % AVERAGE_ENERGY_INT == 0) {
-                    averageEnergy();
-                    if (saveLongTail) saveLongTail();
-                }
-
-                if (i % SAVE_CONFIG_N_CORR_INT == 0) {
-                    saveCorrelation();
-                    saveState();
-                }
-
-                i++;
-            }
-
-        }
-        currStep = i;
-        finished = true;
-
-        saveState();
-        saveLongTail();
-        closeLongTail();
-
-        System.out.print("" + myFolder + " finished on " + currStep + " steps.\t");
-    }
 
     private void closeLongTail() {
         if (saveLongTail) try {
@@ -573,14 +432,13 @@ public abstract class Ensemble implements IEnsemble {
     }
 
     private void saveLongTail() {
-        try {
-            if (saveLongTail) {
-                writeStateTo(longTailWriter);
-                longTailWriter.flush();
-            }
+        if (saveLongTail) try {
+            writeStateTo(longTailWriter);
+            longTailWriter.flush();
         } catch (IOException e1) {
             System.out.println("ERROR: can't write " + myFolder + " long tail to writer!");
         }
+
     }
 
     private final void fillCorrAray(int i, int j, int corrIndex) {
@@ -625,8 +483,7 @@ public abstract class Ensemble implements IEnsemble {
      * performs one act of monte-karlo play randomly moves one particle and saves the state
      * with some probability
      */
-    private final boolean play() {
-//        for (int j = 0; j < numPart; j++) {
+    protected final boolean play() {
         // move random particle
         final double deltaE = moveParticle();
         // transition probability checking
@@ -634,7 +491,7 @@ public abstract class Ensemble implements IEnsemble {
         if (deltaE > 0) {
             // compare the transition probability with random
             // All energies are in kT
-            if (exp(-deltaE) >= localRnd.nextDouble(1.0)) {
+            if (exp(-deltaE) >= myRandom(1.000000001)) {
                 acceptTrial();
                 return true;
             }
@@ -645,6 +502,34 @@ public abstract class Ensemble implements IEnsemble {
         }
 
         return false;
+    }
+
+    @Override
+    protected void trialRejected() {
+        oldEnergyStep();
+    }
+
+    @Override
+    protected void trialAccepted() {
+        newEnergyStep();
+    }
+
+    @Override
+    protected void doRareCalc() {
+        averageEnergy();
+        saveConfiguration();
+        saveCorrelation();
+    }
+
+    @Override
+    protected void doMidCalc() {
+        calcCorrelation();
+        saveLongTail();
+    }
+
+    @Override
+    protected void doFrequentCalc() {
+        // do nothing
     }
 
     private final void acceptTrial() {
@@ -662,7 +547,7 @@ public abstract class Ensemble implements IEnsemble {
         final double z = myRandom() * maxDelta;
 
         // setting new trial index and coordinates
-        which = localRnd.nextInt(numPart);
+        which = nextInt(numPart);
 
         xTrial = correctPosition(Xs[which] + x);
         yTrial = correctPosition(Ys[which] + y);
@@ -688,15 +573,6 @@ public abstract class Ensemble implements IEnsemble {
      */
     private final double correctPosition(double coord) {
         return ((boxSize + coord % boxSize) % boxSize);
-        // optimize it
-        // int mod (int a, int b)
-//        {
-//            int ret = a % b;
-//            if(ret < 0)
-//                ret+=b;
-//            return ret;
-//        }
-// OLD code:   (coord - boxSize * (long) (coord * 2 / boxSize - 1));
     }
 
     protected double getBoxSize() {
@@ -704,21 +580,10 @@ public abstract class Ensemble implements IEnsemble {
     }
 
     @Override
-    /**
-     * Used only by external watchers! gives back averaged potential (by last 5 configurations).
-     */
-    public double getEnergy() {
-        return avgEnergy;
+    public double[] getCurrentResult() {
+        return new double[]{avgEnergy / numPart};
     }
 
-
-    @Override
-    public final boolean isFinished() {
-        return finished;
-    }
-
-
-    @Override
     public int getNumPart() {
         return numPart;
     }
@@ -726,24 +591,5 @@ public abstract class Ensemble implements IEnsemble {
     @Override
     public int getT() {
         return T;
-    }
-
-    @Override
-    public String getFolder() {
-        return myFolder;
-    }
-
-    @Override
-    public int getNumSteps() {
-        return numSteps;
-    }
-
-    @Override
-    public final void stop() {
-        finished = true;
-    }
-
-    public String toString() {
-        return "ensmbl:" + myFolder;
     }
 }

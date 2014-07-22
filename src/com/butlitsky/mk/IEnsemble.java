@@ -14,6 +14,7 @@ public interface IEnsemble extends Runnable {
      * Elementary charge in SGS
      */
     public static final double e = 4.8032043e-10;
+
     /**
      * Boltsmann in SGS
      */
@@ -24,6 +25,11 @@ public interface IEnsemble extends Runnable {
     public static final String CORR_FILE = "correlation.dat";
 
     public static final int CORR_LENGTH = 90;
+    /**
+     * scaling factor to convert energy value to kT units
+     * SCALE_FACTOR == e^2 / (Bohr * k)
+     */
+    double SCALE_FACTOR = 315775.01611746440408;
 
     /**
      * current iteration step
@@ -32,23 +38,35 @@ public interface IEnsemble extends Runnable {
 
     // Current state Parameters Getters & Setters ++++++++++
 
-    double getEnergy();
+    /**
+     * Generic result for the ensemble in ready for use flavour (may be multiple values –
+     * "energy, pressure" or "energy1, energy2" etc). Depends on the ensemble type implementation.
+     */
+    double[] getCurrentResult();
 
-//    double getPressure();
-
-    int getNumPart();
+    /**
+     * Contract method to load current state right before running Metropolis execution from
+     * current step to numSteps.
+     * <p/>
+     * Must be called explicitly right after the instance creation (using factory pattern for
+     * example).
+     * <p/>
+     * May either load state from a file or initialize.
+     */
+    void loadState();
 
     int getNumSteps();
 
     int getT();
 
-    String getFolder();
     /**
      * returns true if this ensemble is not being executed anymore
      */
     boolean isFinished();
 
-    /** gracefull stop the ensemble if running with saving state */
+    /**
+     * gracefull stop the ensemble if running with saving state
+     */
     void stop();
 }
 

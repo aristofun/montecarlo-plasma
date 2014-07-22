@@ -1,4 +1,6 @@
-package com.butlitsky.mk;
+package com.butlitsky.mk.ensembles;
+
+import com.butlitsky.mk.options.EOptions;
 
 import static java.lang.Math.pow;
 
@@ -10,14 +12,13 @@ import static java.lang.Math.pow;
  * Date: 02.03.13
  * Time: 17:19
  */
-public class EnsemblePseudoPotential extends Ensemble {
+public class NVTEnsemblePseudoPotential extends NVTEnsemble {
 
     public static final double LACING_POINT = 185.0;
 
-    public EnsemblePseudoPotential(EOptions options) {
+    public NVTEnsemblePseudoPotential(EOptions options) {
         super(options);
 
-        initialize();
         System.out.println(" Pseudo Potential for T = " + options.getT() + ", " +
                 "lacing pt. = " + LACING_POINT + ", created!");
     }
@@ -52,7 +53,6 @@ public class EnsemblePseudoPotential extends Ensemble {
     }
 
 
-    @Override
     protected final double getEnergy(double r, boolean attraction) {
         // Assume non-coulomb potential makes zero contribution to Energy
         if (attraction && (r < LACING_POINT)) {

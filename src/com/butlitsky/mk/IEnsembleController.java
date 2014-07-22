@@ -13,7 +13,4 @@ public interface IEnsembleController {
 
     /** gracefully stop all controller threads and return then */
     void stop();
-
-//    /** used to redraw progress for a given ensemble */
-//    void updateProgress(IEnsemble me, int step);
 }

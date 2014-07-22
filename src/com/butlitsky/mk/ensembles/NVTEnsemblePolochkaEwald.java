@@ -1,4 +1,7 @@
-package com.butlitsky.mk;
+package com.butlitsky.mk.ensembles;
+
+import com.butlitsky.mk.options.CLOptions;
+import com.butlitsky.mk.options.EOptions;
 
 import static org.apache.commons.math3.special.Erf.erfc;
 import static org.apache.commons.math3.util.FastMath.*;
@@ -13,17 +16,7 @@ import static org.apache.commons.math3.util.FastMath.*;
  * <a href="http://www.google.ru/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&ved=0CC0QFjAA&url=http%3A%2F%2Fwww.mmk.su.se%2Fdocuments%2Fpublications%2Fthesis_fredrik.pdf&ei=4UQsUsKRKeik4ATX_4CYBg&usg=AFQjCNHfS25g4lwiSOrjjcqHcQJMvST7GQ&sig2=dQn4yb3NGhebXCn_QAjWhQ&bvm=bv.51773540,d.bGE"
  * >link</a>
  */
-public class EnsemblePolochkaEwald extends EnsemblePolochka {
-    /**
-     * Ewald alpha
-     */
-    public static double DELTA = 0.00000001;
-
-    /**
-     * Ewal n cutoff
-     */
-    public static int Ncutoff = 3;
-
+public class NVTEnsemblePolochkaEwald extends NVTEnsemblePolochka {
 
     private static boolean notPrinted = true;
 
@@ -34,17 +27,16 @@ public class EnsemblePolochkaEwald extends EnsemblePolochka {
     private final double myUself;
 
 
-    public EnsemblePolochkaEwald(EOptions options) {
-        super(options,false);
-        myDelta = DELTA;
-        myNcutoff = Ncutoff;
+    protected NVTEnsemblePolochkaEwald(EOptions options) {
+        super(options);
+        myDelta = CLOptions.EWALD_DELTA;
+        myNcutoff = CLOptions.EWALD_N_CUTOFF;
         myAlpha = PI * myNcutoff / (getBoxSize() * sqrt(-log(myDelta)));
 
-        myRcut = PI * Ncutoff / (myAlpha * myAlpha * getBoxSize()); // getBoxSize();
+        myRcut = PI * myNcutoff / (myAlpha * myAlpha * getBoxSize()); // getBoxSize();
         myUself = Uself();
 
         printStat(myDelta, myNcutoff, myAlpha, myAlpha * getBoxSize(), myRcut / getBoxSize());
-        initialize();
     }
 
     private static void printStat(double delta, int ncutoff, double alpha, double alphaL, double rcut) {

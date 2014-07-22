@@ -1,13 +1,14 @@
 package com.butlitsky.mk;
 
-import org.apache.commons.cli.*;
+import com.butlitsky.mk.options.CLOptions;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "8.2 + cubic start + fast stop";
+    public static final String version = "9.0 + total refactoring of v.8";
 
     /**
      * <pre>
@@ -39,23 +40,9 @@ public class Main {
         Date start = new Date();
         System.out.println("\nMonte-Karlo game v. " + version + ", (c) Michael Butlitsky 2013\n");
 
-
-        /* playground
-        Deque<Double> deck = new ArrayDeque<Double>(3);
-        deck.addFirst(4.9);
-        deck.addFirst(3.9);
-        deck.addFirst(0.9);
-
-        while (start != null) {
-            deck.addFirst(7.7);
-            deck.addFirst(2.7);
-            deck.removeLast();
-            deck.removeLast();
-
-            System.out.println(deck);
-        }             */
-
         // apache CLI lib options parser
+
+
         parseArgs(args);
 
         System.out.println();
@@ -63,7 +50,7 @@ public class Main {
         Locale.setDefault(Locale.US); // for reading/writing '.' delimited doubles properly
 
         try {
-            final EnsembleController controller = new EnsembleController();
+            final IEnsembleController controller = new EnsembleController();
 
             Runtime.getRuntime().addShutdownHook(new Thread() {
                 public void run() {
@@ -77,9 +64,7 @@ public class Main {
                 }
             });
 
-
             controller.start();
-
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -93,172 +78,14 @@ public class Main {
     }
 
     private static void parseArgs(String[] args) {
-        Option temp = OptionBuilder.withArgName("TEMP").hasArg().withDescription("temperature " +
-                "for any ensemble type (overrides mk_config.ini, no default value)")
-                .withLongOpt("temp").create("t");
-
-        Option polka = OptionBuilder.withArgName("POLKA").hasArg().withDescription("polochka " +
-                "parameter value (2.0 default)").withLongOpt("polka").create("po");
-
-        Option workers = OptionBuilder.withArgName("NUM").hasArg().withDescription("number of " +
-                "parallel threads (default is MAX(2, CPUs/2)").withLongOpt("workers").create("w");
-
-        Option particles = OptionBuilder.withArgName("NUM").hasArg().withDescription("number of " +
-                "particles, if set all mk_config.ini options ignored").withLongOpt("particles")
-                .create("pa");
-
-        Option avpoints = OptionBuilder.withArgName("NUM").hasArg().withDescription("number of " +
-                "averaging points for Energy (default is number of total steps!)").withLongOpt
-                ("avpoints")
-                .create("ap");
-
-        Option steps = OptionBuilder.withArgName("NUM").hasArg().withDescription("number of " +
-                "steps (x Number of Particles), if set all mk_config.ini options ignored")
-                .withLongOpt("steps")
-                .create("stp");
-
-        Option delta = OptionBuilder.withArgName("DELTA_FACTOR").hasArg()
-                .withDescription("maxDx coeff. (overrides .ini parameters if set) \n" +
-                        "        – zero equals 1. x BOX SIZE \n" +
-                        "        – if float number,  trial shift delta position == this " +
-                        "number * average distance between particles (depends on density) along every axis.\n")
-                .withLongOpt("delta").create("d");
-
-        Option refresh = OptionBuilder.withArgName("SECONDS").hasArg()
-                .withDescription("threads status refresh interval (5 sec. default)")
-                .withLongOpt("refresh").create("r");
-
-        Option ewaldDelta = OptionBuilder.withArgName("NUM").hasArg().withDescription("Ewald " +
-                "accuracy delta parameter (0.001 default)").withLongOpt("ewaldelta").create("ewd");
-
-        Option ewaldNcut = OptionBuilder.withArgName("NUM").hasArg().withDescription("Ewald" +
-                "Ncutoff parameter (3 default)").withLongOpt("ewaldn").create("ewn");
-
-        Option harrisR = OptionBuilder.withArgName("NUM").hasArg().withDescription("Harris " +
-                "radius. When set Harris algorithm used with given R in L (5 default)")
-                .withLongOpt("harris").create("harris");
-
-        Option stepsToPass = OptionBuilder.withArgName("NUM").hasArg().withDescription("Number " +
-                "of steps [times num_part] to ignore in markov chain averages (default 50)")
-                .withLongOpt("inisteps").create("istp");
-
-        Options options = new Options();
-        options.addOption("h", false, "show this help and exit");
-        options.addOption("ew", false, "use Ewald summation");
-        options.addOption("pseudo", false, "use Pseudopotential");
-        options.addOption("cubic", false, "use simple cubic start config (randomized by default)");
-        options.addOption(avpoints);
-        options.addOption(polka);
-        options.addOption(delta);
-        options.addOption(refresh);
-        options.addOption(workers);
-        options.addOption(particles);
-        options.addOption(steps);
-        options.addOption(ewaldDelta);
-        options.addOption(ewaldNcut);
-        options.addOption(harrisR);
-        options.addOption(temp);
-        options.addOption(stepsToPass);
-
-        CommandLineParser parser = new BasicParser();
-
         try {
             // parse the command line arguments
-            CommandLine line = parser.parse(options, args);
-
-            if (line.hasOption("h")) {
-                // automatically generate the help statement
-                printHelpAndExit(options);
-            }
-
-            if (line.hasOption("pseudo")) {
-                EnsembleController.ENS_TYPE = 3;
-                System.out.println("PSEUDO potential");
-            }
-
-            if (line.hasOption("cubic")) { // new in 8.0
-                Ensemble.START_FROM_FCC = true;
-                System.out.println("Initial NaCl fcc cubic");
-            }
-
-            if (line.hasOption("ew")) {
-                EnsembleController.ENS_TYPE = 1;
-                System.out.println("EWALD calculations!");
-
-                if (line.hasOption("ewn")) {
-                    EnsemblePolochkaEwald.Ncutoff = Integer.parseInt(line.getOptionValue("ewn"));
-                }
-                if (line.hasOption("ewd")) {
-                    EnsemblePolochkaEwald.DELTA = Double.parseDouble(line.getOptionValue("ewd"));
-                }
-            }
-
-            if (line.hasOption("harris")) {
-                EnsembleController.ENS_TYPE = 2;
-                System.out.println("Harrison calculations!")
-                ;
-                EnsemblePolochkaHarrison.N
-                        = Integer.parseInt(line.getOptionValue("harris"));
-                System.out.println("Harrison R = " + EnsemblePolochkaHarrison.N + "");
-            }
-
-
-            if (line.hasOption("pa")) {
-                EnsembleController.DEFAULT_NUM_PARTICLES = Integer.parseInt(line.getOptionValue("pa"));
-                System.out.println("Custom particles number = " + EnsembleController.DEFAULT_NUM_PARTICLES);
-            }
-
-            if (line.hasOption("stp")) {
-                EnsembleController.DEFAULT_NUM_STEPS = Integer.parseInt(line.getOptionValue("stp"));
-                System.out.println("Custom steps number = " + EnsembleController.DEFAULT_NUM_STEPS);
-            }
-
-            if (line.hasOption("po")) {
-                EnsemblePolochka.EPSILON = Double.parseDouble(line.getOptionValue("polka"));
-            }
-            System.out.println("Polochka (electron-ion) = - " + EnsemblePolochka.EPSILON);
-
-            if (line.hasOption("t")) {
-                EnsembleController.DEFAULT_T = Integer.parseInt(line.getOptionValue("temp"));
-            }
-
-            if (line.hasOption("w")) {
-                EnsembleController.NUM_THREADS = Integer.parseInt(line.getOptionValue("workers"));
-                System.out.println("Custom workers count = " + EnsembleController.NUM_THREADS);
-            }
-
-            if (line.hasOption("d")) {
-                EnsembleController.DELTA_FACTOR = Double.parseDouble(line.getOptionValue("delta"));
-                System.out.println("Custom delta X = " + EnsembleController.DELTA_FACTOR);
-            }
-
-            if (line.hasOption("inisteps")) { // new in 8.0
-                Ensemble.INITIAL_NUM_STEPS = Integer.parseInt(line.getOptionValue("inisteps"));
-                System.out.println("Custom INITIAL STEPS = " + Ensemble.INITIAL_NUM_STEPS);
-            }
-
-            if (line.hasOption("r")) {
-                EnsembleController.REFRESH_DELAY
-                        = 1000 * Integer.parseInt(line.getOptionValue("refresh"));
-            }
-            System.out.println("Status refresh delay = " + EnsembleController.REFRESH_DELAY / 1000);
-
-            if (line.hasOption("ap")) {
-                Ensemble.NUM_ENERGY_AVG_POINTS
-                        = Integer.parseInt(line.getOptionValue("ap"));
-            }
-            System.out.println("Avg. points = " + Ensemble.NUM_ENERGY_AVG_POINTS);
-        } catch (Exception exp) {
-            // oops, something went wrong
-            System.err.println("Parsing failed, using defaults  Reason: " + exp.getMessage());
-            printHelpAndExit(options);
+            CLOptions.init(args);
+        } catch (IllegalArgumentException exp) {
+            // oops, not good options
+            System.err.println("CL options not parsed.");
+            System.exit(0);
         }
-    }
-
-    private static void printHelpAndExit(Options options) {
-        HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp("(./runmk.command | runmk.bat) [OPTIONS]", options);
-        System.exit(0);
     }
 
     private static String getHumanTimeDiff(Date oldTime, Date newTime) {

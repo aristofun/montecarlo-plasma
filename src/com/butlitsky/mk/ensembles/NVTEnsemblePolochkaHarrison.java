@@ -1,4 +1,7 @@
-package com.butlitsky.mk;
+package com.butlitsky.mk.ensembles;
+
+import com.butlitsky.mk.options.CLOptions;
+import com.butlitsky.mk.options.EOptions;
 
 import static org.apache.commons.math3.util.FastMath.pow;
 import static org.apache.commons.math3.util.FastMath.sqrt;
@@ -10,25 +13,20 @@ import static org.apache.commons.math3.util.FastMath.sqrt;
  * Simple calculation of Madelung constants, Walter A. Harrison
  * <p/>
  */
-public class EnsemblePolochkaHarrison extends EnsemblePolochka {
-    /**
-     * R = N * BoxSize
-     */
-    public static int N = 5;
-
+public class NVTEnsemblePolochkaHarrison extends NVTEnsemblePolochka {
     private final double myRcut;
     private final double myL;
     private final double myNcutoff2;
+    private final int N;
 
 
-    public EnsemblePolochkaHarrison(EOptions options) {
-        super(options,false);
+    protected NVTEnsemblePolochkaHarrison(EOptions options) {
+        super(options);
 
+        N = CLOptions.HARRISON_N;
         myL = getBoxSize();
         myRcut = myL * (0.5 + N);
         myNcutoff2 = pow(sqrt(2) + N, 2);
-
-        initialize();
     }
 
 

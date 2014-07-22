@@ -1,27 +1,24 @@
-package com.butlitsky.mk;
+package com.butlitsky.mk.ensembles;
+
+import com.butlitsky.mk.options.CLOptions;
+import com.butlitsky.mk.options.EOptions;
 
 /**
  * User: aristofun
  * Date: 02.03.13
  * Time: 17:19
  */
-public class EnsemblePolochka extends Ensemble {
-    /**
-     * polochka deepness in kT
-     */
-    public static double EPSILON = 4.0;
+public class NVTEnsemblePolochka extends NVTEnsemble {
 
     protected final double myEpsilon;
 
-    public EnsemblePolochka(EOptions options, boolean runinit) {
+    protected NVTEnsemblePolochka(EOptions options) {
         super(options);
-        myEpsilon = EPSILON;
+        myEpsilon = CLOptions.POLOCHKA;
 
-        System.out.print(" polochka size = " + SHORT_FORMAT.format(SCALE_FACTOR / (T * myEpsilon)) + "\n");
-        if (runinit) initialize();
+        System.out.print(" polochka=" + SHORT_FORMAT.format(SCALE_FACTOR / (T * myEpsilon)));
     }
 
-    @Override
     /**
      * e^2 = 23,07077154753849 * e-20
      * Bohr (cm) = 5,2917721092e-9
@@ -43,7 +40,7 @@ public class EnsemblePolochka extends Ensemble {
             }
         } else {
             if (r < 1)  // in Bor's radiuses
-                return getPotential(1, attraction);
+                return getPotential(1, false);
             else
                 // The hard-coded Coloumb energy, always the same.
                 return (SCALE_FACTOR / (T * r));
@@ -83,7 +80,6 @@ public class EnsemblePolochka extends Ensemble {
     }
 
 
-    @Override
     protected final double getEnergy(double r, boolean attraction) {
         // – constant potential makes zero contribution to Energy
         if (attraction && (r < (SCALE_FACTOR / (T * myEpsilon)))) {

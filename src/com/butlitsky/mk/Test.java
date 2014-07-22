@@ -3,7 +3,8 @@ package com.butlitsky.mk;
 import org.apache.commons.math3.util.FastMath;
 
 /**
- * Created with IntelliJ IDEA.
+ * Tests for different math stuff used in the programm etc.
+ *
  * User: aristofun
  * Date: 12.07.13
  * Time: 15:14

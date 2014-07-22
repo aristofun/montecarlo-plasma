@@ -1,4 +1,4 @@
-package com.butlitsky.mk;
+package com.butlitsky.mk.math;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
