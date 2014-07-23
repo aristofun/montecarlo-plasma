@@ -89,7 +89,7 @@ public class CLOptions {
                 "Ens.type " + ENSEMBLE_TYPE + ", Num.part " + NUM_PARTICLES + ", " +
                         "steps " + DEFAULT_NUM_STEPS / 1000
                         + "K, polka " + POLOCHKA + ", dX " + MAX_DELTA_FACTOR + ", Avg.points "
-                        + NUM_ENERGY_AVG_POINTS + ", refresh " + REFRESH_DELAY / 1000;
+                        + NUM_ENERGY_AVG_POINTS/1000 + "K, refresh " + REFRESH_DELAY / 1000;
     }
 
     public static void init(String[] args) throws IllegalArgumentException {

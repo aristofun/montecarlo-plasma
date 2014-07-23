@@ -491,7 +491,7 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
         if (deltaE > 0) {
             // compare the transition probability with random
             // All energies are in kT
-            if (exp(-deltaE) >= myRandom(1.000000001)) {
+            if (exp(-deltaE) >= myRandom(1.00000001)) {
                 acceptTrial();
                 return true;
             }
