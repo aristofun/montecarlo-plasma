@@ -1,5 +1,6 @@
 package com.butlitsky.mk;
 
+import com.butlitsky.mk.ensembles.GibbsConfigurationManager;
 import com.butlitsky.mk.ensembles.EnsemblesFactory;
 import com.butlitsky.mk.options.CLOptions;
 import com.butlitsky.mk.options.EOptions;
@@ -7,9 +8,7 @@ import com.butlitsky.mk.options.EOptions;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.*;
@@ -124,12 +123,15 @@ public class EnsembleController implements IEnsembleController {
             wait(CLOptions.REFRESH_DELAY);
         }
 
-        drawStatus();
-        saveResults();
 
         for (IEnsemble current : ensembles) {
             current.stop();
         }
+
+        sleep(500); // xxx: to be sure all threads stopped and to draw actual results on next line
+
+        drawStatus();
+        saveResults();
 
         System.out.println("Controller (" + ensembles.size() + " points) finished.");
         pool.shutdown();
@@ -164,8 +166,8 @@ public class EnsembleController implements IEnsembleController {
         try {
             for (Integer currentKey : ensemblesResultValues.keySet()) {
                 BufferedWriter writer = Files.newBufferedWriter(
-                        getPath(currentKey + "K_" + CLOptions.NUM_PARTICLES + "pa_d" +
-                                CLOptions.MAX_DELTA_FACTOR + "_results" + ".txt"),
+                        GibbsConfigurationManager.getPath(currentKey + "K_" + CLOptions.NUM_PARTICLES + "pa_d" +
+                                                                  CLOptions.MAX_DELTA_X + "_results" + ".txt"),
                         Charset.defaultCharset());
 
                 Set<IEnsemble> iEnsembles = ensemblesResultValues.get(currentKey).keySet();
@@ -184,16 +186,6 @@ public class EnsembleController implements IEnsembleController {
             e.printStackTrace();
             System.out.println("ERROR: can't save energy lists!");
         }
-    }
-
-
-    /**
-     * Utility method for file seeking
-     *
-     * TODO: move out here
-     */
-    public static final Path getPath(String path) {
-        return FileSystems.getDefault().getPath(".", path);
     }
 
 

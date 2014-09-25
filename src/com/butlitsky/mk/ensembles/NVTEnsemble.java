@@ -1,8 +1,8 @@
 package com.butlitsky.mk.ensembles;
 
-import com.butlitsky.mk.EnsembleController;
 import com.butlitsky.mk.options.CLOptions;
 import com.butlitsky.mk.options.EOptions;
+import org.apache.commons.math3.util.FastMath;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -15,12 +15,12 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 
-import static org.apache.commons.math3.util.FastMath.*;
+import static org.apache.commons.math3.util.FastMath.ceil;
+import static org.apache.commons.math3.util.FastMath.exp;
 
 /**
- * Basic class for all the metropolis abstractions. No assumptions on the ensemble details.
- * Just Metropolis algorithm.
- * User: aristofun
+ * Basic class for all the metropolis abstractions. Assuming NVT single box ensemble.
+ * <p/>
  * Date: 03.03.13
  * Time: 13:04
  */
@@ -64,28 +64,32 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
 
 
     protected NVTEnsemble(EOptions options) {
-        super(options);
+        super(options,
+              options.getNumParticles() + 1,
+              options.getNumParticles() * 3 + 7,
+              options.getNumParticles() * 7 + 11);
+
         numPart = opt.getNumParticles();
         T = opt.getT();
 
-        boxSize = pow(numPart / (2 * opt.getDensity()),
-                0.33333333333333333333) / BOHR; // parameter is Ne(Ni),
+        boxSize = FastMath.cbrt(numPart / (2 * opt.getDensity())) / BOHR; //
+        // parameter is Ne(Ni),
         // we double 'cause total density is twice bigger
 
         halfBox = boxSize / 2.0;
         // average e-i distance => x 2
-        double avgDistance = pow(2 * opt.getDensity(), -0.3333333333333333333333) / BOHR;
+        double avgDistance = FastMath.cbrt(1. / (2. * opt.getDensity())) / BOHR;
         double factor = opt.getMaxDelta();
 
         // new in 8.0 – CLI params always multiplied by avgDistance
         maxDelta = (factor == 0.0) ? boxSize : factor * avgDistance;
 
         System.out.print(myFolder + ": avg.dist=" + SHORT_FORMAT.format(avgDistance) + ", " +
-                "delta=" + SHORT_FORMAT.format(maxDelta) + ", boxSize="
-                + SHORT_FORMAT.format(boxSize));
+                                 "delta=" + SHORT_FORMAT.format(maxDelta) + ", boxSize="
+                                 + SHORT_FORMAT.format(boxSize));
 
         corrNormirovka = 4. * (boxSize * boxSize * boxSize) / (numPart * numPart);
-        corrDr = StrictMath.sqrt(3.0 * boxSize * boxSize) / 1.99999999999 / (CORR_LENGTH);
+        corrDr = Math.sqrt(3.0 * boxSize * boxSize) / 1.99999999999 / (CORR_LENGTH);
 
         corrArray[0] = new double[CORR_LENGTH];
         corrArray[1] = new double[CORR_LENGTH];
@@ -98,8 +102,8 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
 
         // OPTIONS first bit == save longtail
         saveLongTail = ((options.getStrategy() & 1) == 1);
-        avgPoints = (CLOptions.NUM_ENERGY_AVG_POINTS < 0) ?
-                getNumSteps() - CLOptions.INITIAL_STEPS : CLOptions.NUM_ENERGY_AVG_POINTS;
+        avgPoints = (CLOptions.NUM_ENERGY_AVG_STEPS < 0) ?
+                getNumSteps() - CLOptions.INITIAL_STEPS : CLOptions.NUM_ENERGY_AVG_STEPS;
         System.out.print(", AVG.=" + avgPoints);
 
         energies = new ArrayDeque<>(avgPoints);
@@ -132,10 +136,11 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
     private void applyAdditionalStrategies() {
         if (saveLongTail) {
             try {
-                longTailWriter = Files.newBufferedWriter(EnsembleController.getPath(myFolder + "/" + LONGTAIL_FILE),
-                        Charset.defaultCharset(), StandardOpenOption.CREATE,
-                        opt.isOld() ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING,
-                        StandardOpenOption.WRITE);
+                longTailWriter = Files.newBufferedWriter(GibbsConfigurationManager.getPath(myFolder + "/" + LONGTAIL_FILE),
+                                                         Charset.defaultCharset(),
+                                                         StandardOpenOption.CREATE,
+                                                         opt.isOld() ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING,
+                                                         StandardOpenOption.WRITE);
             } catch (Exception e) {
                 System.out.println("ERROR: Can't create " + LONGTAIL_FILE + " for " + myFolder);
             }
@@ -146,11 +151,11 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
      * reads config or generates new random if any errors ocurred
      */
     private void loadFromStateFile() {
-        myConfigPath = EnsembleController.getPath(myFolder + "/" + STATE_FILE);
-        myCorrPath = EnsembleController.getPath(myFolder + "/" + CORR_FILE);
+        myConfigPath = GibbsConfigurationManager.getPath(myFolder + "/" + STATE_FILE);
+        myCorrPath = GibbsConfigurationManager.getPath(myFolder + "/" + CORR_FILE);
 
         try {
-            Files.createDirectories(EnsembleController.getPath(myFolder));
+            Files.createDirectories(GibbsConfigurationManager.getPath(myFolder));
         } catch (IOException e) {
             e.printStackTrace();
             System.out.println("ERROR: can't find " + myFolder + " directory, worker is dead");
@@ -176,6 +181,7 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
         if (!opt.isOld()) {
             System.out.print("! from scratch");
             initParticlesPosition(); // initial distribution, reset counters
+            saveConfiguration();
         }
 
         System.out.println();
@@ -259,7 +265,7 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
      * @return potential between two particles assuming j[trialX, trialY, trialZ] particle
      */
     private final double getPotential(int i, int j, double trialX, double trialY, double trialZ) {
-        final double r = StrictMath.sqrt(dSquared(trialX - Xs[i], trialY - Ys[i], trialZ - Zs[i]));
+        final double r = Math.sqrt(dSquared(trialX - Xs[i], trialY - Ys[i], trialZ - Zs[i]));
 
         if (i != j) {
             if (j < (numPart / 2))   // First _num/2 are IONS
@@ -290,7 +296,7 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
     protected abstract double getPotentialAsym(double r, boolean ee, boolean ii);
 
     private final double getEnergy(int i, int j) {
-        final double r = StrictMath.sqrt(dSquared(Xs[j] - Xs[i], Ys[j] - Ys[i], Zs[j] - Zs[i]));
+        final double r = Math.sqrt(dSquared(Xs[j] - Xs[i], Ys[j] - Ys[i], Zs[j] - Zs[i]));
 
         if (i != j) {
             if (j < (numPart / 2))   // First _num/2 are IONS
@@ -312,7 +318,7 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
 
     protected abstract double getEnergyAsym(double r, boolean ee, boolean ii);
 
-    protected final double dSquared(double dx, double dy, double dz) {
+    private final double dSquared(double dx, double dy, double dz) {
         dx = fit2box(dx);
         dy = fit2box(dy);
         dz = fit2box(dz);
@@ -367,7 +373,7 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
 
         if (corrAverager == 0) {
             System.out.println("WARNING: corrAverager == 0 for " + myFolder + ", " +
-                    "skip saveCorrelation");
+                                       "skip saveCorrelation");
             return;
         }
 
@@ -378,9 +384,9 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
             final double norm = corrNormirovka / (4.0 * Math.PI * r * r * corrDr * corrAverager);
             // writing
             strings.add(FORMAT.format(r) + "\t"
-                            + FORMAT.format(corrArray[0][i] * norm) + "\t"
-                            + FORMAT.format(corrArray[1][i] * norm) + "\t"
-                            + FORMAT.format(corrArray[2][i] * norm) + "\t"
+                                + FORMAT.format(corrArray[0][i] * norm) + "\t"
+                                + FORMAT.format(corrArray[1][i] * norm) + "\t"
+                                + FORMAT.format(corrArray[2][i] * norm) + "\t"
             );
         }
 
@@ -392,7 +398,7 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
         }
     }
 
-    protected void saveConfiguration() {
+    private void saveConfiguration() {
         averageEnergy();
 
         // create strings list from arrays
@@ -400,9 +406,9 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
             BufferedWriter writer = Files.newBufferedWriter(myConfigPath, Charset.defaultCharset());
 
             writer.write("" + getCurrStep() + "\t"
-                    + FORMAT.format(avgEnergy) + "\t"
-                    + SHORT_FORMAT.format(avgEnergy / numPart) + "\t"
-                    + SHORT_FORMAT.format(opt.getGamma()));
+                                 + FORMAT.format(avgEnergy) + "\t"
+                                 + SHORT_FORMAT.format(avgEnergy / numPart) + "\t"
+                                 + SHORT_FORMAT.format(opt.getGamma()));
 
             writer.newLine();
             writeStateTo(writer);
@@ -416,7 +422,7 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
     private void writeStateTo(BufferedWriter writer) throws IOException {
         for (int i = 0; i < numPart; i++) {
             writer.write(FORMAT.format(Xs[i]) + "\t"
-                    + FORMAT.format(Ys[i]) + "\t" + FORMAT.format(Zs[i]));
+                                 + FORMAT.format(Ys[i]) + "\t" + FORMAT.format(Zs[i]));
             writer.newLine();
         }
     }
@@ -445,8 +451,8 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
         if (i != j) {
             // get the index of a radius in array
             final int idx =
-                    (int) (StrictMath.sqrt(dSquared(Xs[i] - Xs[j], Ys[i] - Ys[j],
-                            Zs[i] - Zs[j])) / corrDr);
+                    (int) (Math.sqrt(dSquared(Xs[i] - Xs[j], Ys[i] - Ys[j],
+                                              Zs[i] - Zs[j])) / corrDr);
             // increment ION-ION array
             if (idx < CORR_LENGTH)
                 corrArray[corrIndex][idx]++;
@@ -482,11 +488,13 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
     /**
      * performs one act of monte-karlo play randomly moves one particle and saves the state
      * with some probability
+     * @param step
      */
-    protected final boolean play() {
+    protected final boolean play(int step) {
         // move random particle
         final double deltaE = moveParticle();
         // transition probability checking
+//        System.out.println("deltaE/exp(): " + deltaE + " / " + exp(-deltaE));
         // potential increased
         if (deltaE > 0) {
             // compare the transition probability with random
@@ -505,12 +513,12 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
     }
 
     @Override
-    protected void trialRejected() {
+    protected void onTrialRejected() {
         oldEnergyStep();
     }
 
     @Override
-    protected void trialAccepted() {
+    protected void onTrialAccepted() {
         newEnergyStep();
     }
 

@@ -1,5 +1,7 @@
 package com.butlitsky.mk.options;
 
+import org.apache.commons.math3.util.FastMath;
+
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -22,6 +24,7 @@ public class EOptions implements CharSequence {
     public static final String SCIENTIFIC_FORMAT_STR = "0.000000000000000E0";
     public static final String SHORT_FORMAT_STR = "0.000E0";
     public static final String MICRO_FORMAT_STR = "0.##E0";
+    public static final double ONE_THIRD = (double) 1. / 3.;
 
     private final NumberFormat MICRO_FORMAT = new DecimalFormat(MICRO_FORMAT_STR);
 
@@ -44,8 +47,7 @@ public class EOptions implements CharSequence {
 
     private final String myFolder;
 
-    EOptions(int t, double density, double dX, int numParticles,
-             int numSteps, int strat, boolean old) {
+    EOptions(int t, double density, double dX, int numParticles, int numSteps, int strat, boolean old) {
         myDensity = density;
         maxDelta = dX;
         myNumParticles = numParticles;
@@ -54,7 +56,7 @@ public class EOptions implements CharSequence {
         T = t;
         isOld = old;
 
-        gamma = e * e * pow(2 * density, 0.333333333333333) / (k * T);
+        gamma = e * e * FastMath.cbrt(2 * density) / (k * T);
 
         myFolder = "_" + T + "K_" + numParticles + "pa_d" + maxDelta + "/" +
                 MICRO_FORMAT.format(myDensity);
@@ -164,7 +166,7 @@ public class EOptions implements CharSequence {
         return new EOptions(
                 (CLOptions.DEFAULT_TEMP < 0) ? abs(t) : CLOptions.DEFAULT_TEMP, // T
                 abs(density),    // density
-                CLOptions.MAX_DELTA_FACTOR, // delta
+                CLOptions.MAX_DELTA_X, // delta
                 CLOptions.NUM_PARTICLES, // numPart
                 (CLOptions.DEFAULT_NUM_STEPS < 0) ? numSteps : CLOptions.DEFAULT_NUM_STEPS, // numSteps
                 strategy,       // strategy

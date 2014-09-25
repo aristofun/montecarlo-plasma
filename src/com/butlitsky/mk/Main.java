@@ -2,46 +2,52 @@ package com.butlitsky.mk;
 
 import com.butlitsky.mk.options.CLOptions;
 
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "9.0 + total refactoring of v.8";
+    public static final String version = "10.0 + new Gibbse Ensemble support";
 
     /**
      * <pre>
      * usage: (./runmk.command | runmk.bat) [OPTIONS]
-     *  -ap,--avpoints <NUM>        number of averaging points for Energy (default is number of total steps!)
-     *  -d,--delta <DELTA_FACTOR>   maxDx coeff. (overrides .ini parameters if set)
-     *      – zero equals  1. x BOX SIZE
-     *      – if float number >= 1 trial shift delta position == this number * average distance
-     * between particles (depends on density) along every axis.
-     *      – if float number < 1 trial shift delta is this fraction of a box size along each
-     *        axis (i. e. 0.5 means trial particle shifts to half of box size along each axis).
      *  -ew                         use Ewald summation
      *  -ewd,--ewaldelta <NUM>      Ewald accuracy delta parameter (0.001 default)
      *  -ewn,--ewaldn <NUM>         EwaldNcutoff parameter (3 default)
+     *
      *  -h                          show this help and exit
      *  -harris,--harris <NUM>      Harris radius. When set Harris algorithm used with given R in
      *  L (5 default)
+     *
      *  -pseudo                     Use pseudo potential ensemble, all polochka parameters ignored
+     *
+     *  -ap,--avpoints <NUM>        number of averaging points for Energy (default is number of total steps!)
+     *  -d,--delta <DELTA_FACTOR>   maxDx coeff.
+     *      – zero equals  1. x BOX SIZE
+     *      – other values = x avg. distance
+     *
      *  -pa,--particles <NUM>       number of particles, if set all mk_config.ini options ignored
      *  -po,--polka <POLKA>         polochka parameter value (2.0 default)
-     *  -r,--refresh <SECONDS>      threads status refresh interval (5 sec. default)
-     *  -stp,--steps <NUM>          number of steps (x Number of Particles),
-     *  if set all mk_config.ini options ignored
+     *  -
+     *  -stp,--steps <NUM>          number of total steps to go for each point
+     *  -r,--refresh <SECONDS>      threads status refresh interval (15 sec. default)
      *  -w,--workers <NUM>          number of parallel threads, default is MAX(2, CPUs/2)
+     *  -cubic                      start from fcc NaCl initial configuration
+     *
+     *  –inisteps                   number of initial steps to ignore in averages calculations
+     *
+     *  –gibbs                      Use gibbse ensemble calculation (two boxes of total V and N)
+     *  –res, --resolution          Gibbs technique N step delta for per point current values plotting
+     *  –dv, --deltav               Gibbs maximum relative volume change from 0 to 1 (default 0.15)
      * </pre>
      */
     public static void main(String[] args) {
 
         Date start = new Date();
-        System.out.println("\nMonte-Karlo game v. " + version + ", (c) Michael Butlitsky 2013\n");
+        System.out.println("\nMonte-Karlo game v. " + version + ", (c) Michael Butlitsky 2013+\n");
 
         // apache CLI lib options parser
-
 
         parseArgs(args);
 
@@ -56,11 +62,11 @@ public class Main {
                 public void run() {
                     controller.stop();
                     try {
-                        Thread.sleep(2000); // 1 sec to wait all finished
+                        Thread.sleep(2000); // 2 sec to wait all finished
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                    System.out.println("Got SHUTDOWN hook, gracefully complete.");
+                    System.out.println("Got SHUTDOWN signal, gracefully complete.");
                 }
             });
 

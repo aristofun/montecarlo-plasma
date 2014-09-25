@@ -4,7 +4,6 @@ import com.butlitsky.mk.options.CLOptions;
 import com.butlitsky.mk.options.EOptions;
 
 /**
- * User: aristofun
  * Date: 02.03.13
  * Time: 17:19
  */

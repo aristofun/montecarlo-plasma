@@ -4,7 +4,6 @@ import com.butlitsky.mk.options.CLOptions;
 import com.butlitsky.mk.options.EOptions;
 
 import static org.apache.commons.math3.util.FastMath.pow;
-import static org.apache.commons.math3.util.FastMath.sqrt;
 
 /**
  * Harrison R spheres summation summation algorithm.
@@ -26,9 +25,8 @@ public class NVTEnsemblePolochkaHarrison extends NVTEnsemblePolochka {
         N = CLOptions.HARRISON_N;
         myL = getBoxSize();
         myRcut = myL * (0.5 + N);
-        myNcutoff2 = pow(sqrt(2) + N, 2);
+        myNcutoff2 = pow(Math.sqrt(2) + N, 2);
     }
-
 
 
     protected double getCurrentEnergy() {
@@ -102,7 +100,6 @@ public class NVTEnsemblePolochkaHarrison extends NVTEnsemblePolochka {
     /**
      * Compensating energy on the Rcutoff distance with given effective Koulobm charge
      *
-     *
      * @param iQ - particle for which calculating
      * @param q  – total effective charge (without probe particle!)
      * @return
@@ -126,7 +123,7 @@ public class NVTEnsemblePolochkaHarrison extends NVTEnsemblePolochka {
         final double polka = (SCALE_FACTOR / (T * myEpsilon));
 
         if ((attract < 0) && (range < polka)) {
-            return jq*range/polka;
+            return jq * range / polka;
         } else {
             return jq;
         }
@@ -138,6 +135,6 @@ public class NVTEnsemblePolochkaHarrison extends NVTEnsemblePolochka {
         final double y = (Ys[j] - Ys[i]) + ny * myL;
         final double z = (Zs[j] - Zs[i]) + nz * myL;
 
-        return StrictMath.sqrt(x * x + y * y + z * z);
+        return Math.sqrt(x * x + y * y + z * z);
     }
 }

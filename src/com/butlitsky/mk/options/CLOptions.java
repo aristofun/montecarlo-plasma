@@ -16,25 +16,22 @@ public class CLOptions {
      * 1 – basic Ewald summation
      * 2 – Harrison algorithm
      * 3 – Pseudo Potential
+     * 4 – Gibbs ensemble (two separate boxes)
      */
     public static int ENSEMBLE_TYPE = 0;
 
-    public static boolean START_FROM_FCC = false;
+    /**
+     * how often check child ensembles & display status on console (in msec)
+     */
+    public static int REFRESH_DELAY = 15000;
 
     /**
-     * Ewal n cutoff
+     * may be overriden by CLI options, if zero – max(2, CPUs/2) used
      */
-    public static int EWALD_N_CUTOFF = 3;
-    /**
-     * Ewald alpha
-     */
-    public static double EWALD_DELTA = 0.00000001;
+    public static int NUM_THREADS = -1;
 
-    /**
-     * R = N * BoxSize
-     */
-    public static int HARRISON_N = 1;
 
+// ----------------- Common ensemble options --------------------------------
     /**
      * overrides specific particle number in ini file if set in CLI options
      */
@@ -46,39 +43,60 @@ public class CLOptions {
     public static int DEFAULT_NUM_STEPS = -1;
 
     /**
-     * Default polochka deepness in kT
-     */
-    public static double POLOCHKA = 4.0;
-
-    /**
-     * temperature to be overriden by command line options
-     */
-    public static int DEFAULT_TEMP = -1;
-
-    /**
-     * may be overriden by CLI options, if zero – max(2, CPUs/2) used
-     */
-    public static int NUM_THREADS = -1;
-
-    /**
-     * Maximum dX,dY,dZ random displacement coefficient (times avg. distance)
-     */
-    public static double MAX_DELTA_FACTOR = 1;
-
-    /**
      * how many steps from beginning to ignore  in Markov chain
      */
     public static int INITIAL_STEPS = 100000;
 
     /**
-     * how often check child ensembles & display status on console (in msec)
+     * Default polochka deepness in kT
      */
-    public static int REFRESH_DELAY = 15000;
+    public static double POLOCHKA = 4.0;
+
+    /**
+     * temperature to be overriden by command line or *.ini options
+     */
+    public static int DEFAULT_TEMP = -1;
 
     /**
      * These many recent Metropolis steps is taken into account for averages calculation
      */
-    public static int NUM_ENERGY_AVG_POINTS = -1;
+    public static int NUM_ENERGY_AVG_STEPS = 300000;
+
+    /**
+     * Maximum dX,dY,dZ random displacement coefficient (times avg. distance)
+     */
+    public static double MAX_DELTA_X = 1;
+
+    public static boolean START_FROM_FCC = false;
+
+// -------------  Ewald ensemble specific steps --------------------------
+    /**
+     * Ewal n cutoff
+     */
+    public static int EWALD_N_CUTOFF = 3;
+
+    /**
+     * Ewald alpha
+     */
+    public static double EWALD_DELTA = 0.00000001;
+
+// -------------  Harrison ensemble specific steps -----------------------
+    /**
+     * R = N * BoxSize
+     */
+    public static int HARRISON_N = 1;
+
+// -------------- Gibbs ensemble specific options ------------------------
+    /**
+     * current ensembles values resolution by steps (used to print data for plotting
+     * the dynamics of ensembles states migration).
+     */
+    public static int N_RESOLUTION_STEPS = 1000;
+
+    /**
+     * Gibbs maximum relative volume change from 0 to 1
+     */
+    public static double MAX_DELTA_V = 0.15;
 
 
     private CLOptions() {
@@ -88,8 +106,8 @@ public class CLOptions {
         return
                 "Ens.type " + ENSEMBLE_TYPE + ", Num.part " + NUM_PARTICLES + ", " +
                         "steps " + DEFAULT_NUM_STEPS / 1000
-                        + "K, polka " + POLOCHKA + ", dX " + MAX_DELTA_FACTOR + ", Avg.points "
-                        + NUM_ENERGY_AVG_POINTS/1000 + "K, refresh " + REFRESH_DELAY / 1000;
+                        + "K, polka " + POLOCHKA + ", dX " + MAX_DELTA_X + ", Avg.points "
+                        + NUM_ENERGY_AVG_STEPS / 1000 + "K, refresh " + REFRESH_DELAY / 1000;
     }
 
     public static void init(String[] args) throws IllegalArgumentException {
@@ -112,15 +130,19 @@ public class CLOptions {
             throw new IllegalArgumentException();
         }
 
+        if (line.hasOption("cubic")) { // new in 8.0
+            START_FROM_FCC = true;
+            System.out.println("Initial NaCl fcc cubic");
+        }
 
         if (line.hasOption("pseudo")) {
             ENSEMBLE_TYPE = 3;
             System.out.println("PSEUDO potential");
         }
 
-        if (line.hasOption("cubic")) { // new in 8.0
-            START_FROM_FCC = true;
-            System.out.println("Initial NaCl fcc cubic");
+        if (line.hasOption("gibbs")) { // new in v. 9.0
+            ENSEMBLE_TYPE = 4;
+            System.out.println("Gibbs ensemble");
         }
 
         if (line.hasOption("ew")) {
@@ -170,9 +192,9 @@ public class CLOptions {
         }
 
         if (line.hasOption("d")) {
-            MAX_DELTA_FACTOR = Double.parseDouble(line.getOptionValue("delta"));
+            MAX_DELTA_X = Double.parseDouble(line.getOptionValue("delta"));
         }
-        System.out.println("dX factor = " + MAX_DELTA_FACTOR);
+        System.out.println("dX factor = " + MAX_DELTA_X);
 
 
         if (line.hasOption("inisteps")) { // new in 8.0
@@ -186,9 +208,14 @@ public class CLOptions {
         System.out.println("Status refresh delay = " + REFRESH_DELAY / 1000);
 
         if (line.hasOption("ap")) {
-            NUM_ENERGY_AVG_POINTS = Integer.parseInt(line.getOptionValue("ap"));
-            System.out.println("Avg. points = " + NUM_ENERGY_AVG_POINTS);
+            NUM_ENERGY_AVG_STEPS = Integer.parseInt(line.getOptionValue("ap"));
         }
+        System.out.println("Avg. points = " + NUM_ENERGY_AVG_STEPS);
+
+        if (line.hasOption("res")) {
+            N_RESOLUTION_STEPS = Integer.parseInt(line.getOptionValue("res"));
+        }
+        System.out.println("N resolution = " + N_RESOLUTION_STEPS);
     }
 
     @SuppressWarnings("AccessStaticViaInstance")
@@ -210,13 +237,21 @@ public class CLOptions {
                 "averaging points for Energy (default is number of total workingssteps!)")
                 .withLongOpt("avpoints").create("ap");
 
+        Option nResolution = OptionBuilder.withArgName("NUM").hasArg().withDescription("number " +
+                "of averaging points for current values plotting (default is " +
+                N_RESOLUTION_STEPS + " steps)").withLongOpt("resolution").create("res");
+
         Option steps = OptionBuilder.withArgName("STEPS").hasArg().withDescription("number of " +
                 "steps (" + DEFAULT_NUM_STEPS + " by default)").withLongOpt("steps").create("stp");
 
         Option delta = OptionBuilder.withArgName("MAX_dX").hasArg()
                 .withDescription("maxDx coeff. number * average distance between particles " +
-                        "(depends on density) along every axis (" + MAX_DELTA_FACTOR + " default)")
+                        "(depends on density) along every axis (" + MAX_DELTA_X + " default)")
                 .withLongOpt("delta").create("d");
+
+        Option deltav = OptionBuilder.withArgName("MAX_dV/V").hasArg()
+                .withDescription(" Gibbs maximum relative volume change from 0 to 1 (default is " +
+                        MAX_DELTA_V + " )").withLongOpt("deltav").create("dv");
 
         Option refresh = OptionBuilder.withArgName("SECONDS").hasArg()
                 .withDescription("threads status refresh interval (" + REFRESH_DELAY / 1000 +
@@ -236,26 +271,37 @@ public class CLOptions {
 
         Option stepsToPass = OptionBuilder.withArgName("INI_STEPS").hasArg().withDescription
                 ("Number of steps to ignore in markov chain averages (default " + INITIAL_STEPS + ")")
-                .withLongOpt("inisteps").create("istp");
+                .withLongOpt("inisteps").create("inisteps");
 
         Options options = new Options();
 
+
+//      common options
         options.addOption("h", false, "show this help and exit");
-        options.addOption("ew", false, "use Ewald summation");
         options.addOption("pseudo", false, "use Pseudopotential");
         options.addOption("cubic", false, "use simple cubic start config (randomized by default)");
         options.addOption(avpoints);
         options.addOption(polka);
         options.addOption(delta);
+        options.addOption(particles);
         options.addOption(refresh);
         options.addOption(workers);
-        options.addOption(particles);
         options.addOption(steps);
-        options.addOption(ewaldDelta);
-        options.addOption(ewaldNcut);
-        options.addOption(harrisR);
         options.addOption(temp);
         options.addOption(stepsToPass);
+
+//      Gibbs options
+        options.addOption("gibbs", false, "use Gibbs ensemble (two box simulation)");
+        options.addOption(deltav);
+        options.addOption(nResolution);
+
+//      Ewald options
+        options.addOption("ew", false, "use Ewald summation");
+        options.addOption(ewaldDelta);
+        options.addOption(ewaldNcut);
+
+//      Harrison options
+        options.addOption(harrisR);
 
         return options;
     }

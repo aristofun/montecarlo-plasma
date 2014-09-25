@@ -1,0 +1,1 @@
+java -server -cp "*" com.butlitsky.mk.Test %*

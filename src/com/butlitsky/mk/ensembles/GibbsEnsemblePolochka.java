@@ -1,25 +1,21 @@
 package com.butlitsky.mk.ensembles;
 
+import com.butlitsky.mk.options.CLOptions;
 import com.butlitsky.mk.options.EOptions;
 
-import static java.lang.Math.pow;
-
 /**
- * Pseudo potential ensemble. Electron-ion pseudopotential approximation
- * is unique for every [level numbers + temperature] combination.
+ * Gibbse double box ensemble with polochka
  * <p/>
- * Date: 02.03.13
- * Time: 17:19
+ * Created by aristofun on 25.09.14.
  */
-public class NVTEnsemblePseudoPotential extends NVTEnsemble {
+public class GibbsEnsemblePolochka extends GibbsEnsemble {
+    protected final double myEpsilon;
 
-    public static final double LACING_POINT = 185.0;
-
-    public NVTEnsemblePseudoPotential(EOptions options) {
+    protected GibbsEnsemblePolochka(EOptions options) {
         super(options);
+        myEpsilon = CLOptions.POLOCHKA;
 
-        System.out.println(" Pseudo Potential for T = " + options.getT() + ", " +
-                "lacing pt. = " + LACING_POINT + ", created!");
+        System.out.print(" polochka=" + SHORT_FORMAT.format(SCALE_FACTOR / (T * myEpsilon)));
     }
 
     /**
@@ -36,28 +32,17 @@ public class NVTEnsemblePseudoPotential extends NVTEnsemble {
 
         if (attraction)   // ion-electron
         {
-            if (r < LACING_POINT) {
-                // 100 K, lvl 10-30 pseudo potential
-                return -24.836465138387798 + 1.6042494381847763 * pow(r, 0.3);
-            } else {
-                return -1 * SCALE_FACTOR / (T * r);
+            if (r < (SCALE_FACTOR / (T * myEpsilon)))
+                return (-1 * myEpsilon); //
+            else {
+                return (-1 * SCALE_FACTOR / (T * r));
             }
         } else {
-            if (r < 2)  // in Bor's radiuses
-                return getPotential(2, false);
+            if (r < 1)  // in Bor's radiuses
+                return getPotential(1, false);
             else
                 // The hard-coded Coloumb energy, always the same.
                 return (SCALE_FACTOR / (T * r));
-        }
-    }
-
-
-    protected final double getEnergy(double r, boolean attraction) {
-        // Assume non-coulomb potential makes zero contribution to Energy
-        if (attraction && (r < LACING_POINT)) {
-            return 0;
-        } else {
-            return getPotential(r, attraction); // xxx: temporary check full potential calculation
         }
     }
 
@@ -91,5 +76,15 @@ public class NVTEnsemblePseudoPotential extends NVTEnsemble {
             return getEnergy(r, false);
         else
             return getEnergy(r, true);
+    }
+
+
+    protected final double getEnergy(double r, boolean attraction) {
+        // – constant potential makes zero contribution to Energy
+        if (attraction && (r < (SCALE_FACTOR / (T * myEpsilon)))) {
+            return 0;
+        } else {
+            return getPotential(r, attraction);
+        }
     }
 }

@@ -15,6 +15,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * Created by aristofun on 21.07.14.
  */
 public abstract class MetropolisEnsemble implements IEnsemble {
+
     /* Just number formatting utilities */
     protected final NumberFormat FORMAT = new DecimalFormat(EOptions.SCIENTIFIC_FORMAT_STR);
     protected final NumberFormat SHORT_FORMAT = new DecimalFormat(EOptions.SHORT_FORMAT_STR);
@@ -81,7 +82,8 @@ public abstract class MetropolisEnsemble implements IEnsemble {
     private final ThreadLocalRandom localRnd;
 
 
-    protected MetropolisEnsemble(EOptions options) {
+    protected MetropolisEnsemble(EOptions options, int frequentInterval, int midInterval,
+                                 int rareInterval) {
         rnd = new MersenneTwisterFast();
         localRnd = ThreadLocalRandom.current();
 
@@ -90,9 +92,9 @@ public abstract class MetropolisEnsemble implements IEnsemble {
         numSteps = options.getNumSteps();
         myTag = options.getT() + "/" + MICRO_FORMAT.format(options.getDensity());
 
-        CALC_FREQUENT_INT = options.getNumParticles() + 1;
-        CALC_MID_INT = options.getNumParticles() * 3 + 7;
-        CALC_RARE_INT = options.getNumParticles() * 7 + 11;
+        CALC_FREQUENT_INT = frequentInterval;
+        CALC_MID_INT = midInterval;
+        CALC_RARE_INT = rareInterval;
     }
 
 
@@ -143,7 +145,7 @@ public abstract class MetropolisEnsemble implements IEnsemble {
                     System.out.println("STOP " + myFolder + ", finished=true\t");
                     break;
                 }
-                play();
+                play(i);
                 i++;
             }
         }
@@ -157,11 +159,11 @@ public abstract class MetropolisEnsemble implements IEnsemble {
                     break;
                 }
 
-                if (play()) {
-                    trialAccepted();
+                if (play(i)) {
+                    onTrialAccepted();
                     currStep = i;
                 } else {
-                    trialRejected();
+                    onTrialRejected();
                 }
 
                 if (i % CALC_FREQUENT_INT == 0) {
@@ -196,20 +198,21 @@ public abstract class MetropolisEnsemble implements IEnsemble {
      * So that calling this method sequentially eventually changes the ensemble state to more
      * probable.
      *
+     * @param step
      * @return true &mdash; if the trial move was accepted, false &mdash; otherwise.
      */
-    protected abstract boolean play();
+    protected abstract boolean play(int step);
 
 
     /**
      * Do what you have to do after trial move is rejected.
      */
-    protected abstract void trialRejected();
+    protected abstract void onTrialRejected();
 
     /**
      * Do what you have to do after trial move is accepted.
      */
-    protected abstract void trialAccepted();
+    protected abstract void onTrialAccepted();
 
     /**
      * Every ~numPart*7 steps action

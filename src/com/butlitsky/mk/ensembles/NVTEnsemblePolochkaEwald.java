@@ -31,7 +31,7 @@ public class NVTEnsemblePolochkaEwald extends NVTEnsemblePolochka {
         super(options);
         myDelta = CLOptions.EWALD_DELTA;
         myNcutoff = CLOptions.EWALD_N_CUTOFF;
-        myAlpha = PI * myNcutoff / (getBoxSize() * sqrt(-log(myDelta)));
+        myAlpha = PI * myNcutoff / (getBoxSize() * Math.sqrt(-log(myDelta)));
 
         myRcut = PI * myNcutoff / (myAlpha * myAlpha * getBoxSize()); // getBoxSize();
         myUself = Uself();
@@ -120,7 +120,7 @@ public class NVTEnsemblePolochkaEwald extends NVTEnsemblePolochka {
         final double y = fit2box(Ys[j] - Ys[i]) + ny * L;
         final double z = fit2box(Zs[j] - Zs[i]) + nz * L;
 
-        return StrictMath.sqrt(x * x + y * y + z * z);
+        return Math.sqrt(x * x + y * y + z * z);
     }
 
     private final double Urecip() {

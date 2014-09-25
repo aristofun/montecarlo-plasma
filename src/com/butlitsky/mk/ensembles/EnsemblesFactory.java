@@ -28,6 +28,10 @@ public class EnsemblesFactory {
                 ensemble = new NVTEnsemblePseudoPotential(opt);
                 ensemble.loadState();
                 break;
+            case 4:
+                ensemble = new GibbsEnsemblePolochka(opt);
+                ensemble.loadState();
+                break;
             default:
                 ensemble = new NVTEnsemblePolochka(opt);
                 ensemble.loadState();
