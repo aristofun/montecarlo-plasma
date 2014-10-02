@@ -45,7 +45,7 @@ public class CLOptions {
     /**
      * how many steps from beginning to ignore  in Markov chain
      */
-    public static int INITIAL_STEPS = 100000;
+    public static int INITIAL_STEPS = 50000;
 
     /**
      * Default polochka deepness in kT
@@ -60,7 +60,7 @@ public class CLOptions {
     /**
      * These many recent Metropolis steps is taken into account for averages calculation
      */
-    public static int NUM_ENERGY_AVG_STEPS = 300000;
+    public static int NUM_ENERGY_AVG_STEPS = 100000;
 
     /**
      * Maximum dX,dY,dZ random displacement coefficient (times avg. distance)
@@ -96,7 +96,7 @@ public class CLOptions {
     /**
      * Gibbs maximum relative volume change from 0 to 1
      */
-    public static double MAX_DELTA_V = 0.15;
+    public static double MAX_DELTA_V = 0.07;
 
 
     private CLOptions() {

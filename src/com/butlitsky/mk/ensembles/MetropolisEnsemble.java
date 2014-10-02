@@ -108,8 +108,12 @@ public abstract class MetropolisEnsemble implements IEnsemble {
         return numSteps;
     }
 
-    protected int nextInt(int numPart) {
-        return localRnd.nextInt(numPart);
+    /**
+     * Java simple randomizer
+     * @return random number in region [0; number)
+     */
+    protected int nextInt(int number) {
+        return localRnd.nextInt(number);
     }
 
     @Override
@@ -167,7 +171,7 @@ public abstract class MetropolisEnsemble implements IEnsemble {
                 }
 
                 if (i % CALC_FREQUENT_INT == 0) {
-                    doFrequentCalc();
+                    doFrequentCalc(i);
                 }
                 if (i % CALC_MID_INT == 0) {
                     doMidCalc();
@@ -234,13 +238,13 @@ public abstract class MetropolisEnsemble implements IEnsemble {
     /**
      * Every ~numPart steps action
      */
-    protected abstract void doFrequentCalc();
+    protected abstract void doFrequentCalc(int current_step);
 
     /**
      * random (-1.0; 1.0)
      */
     final double myRandom() {
-        return rnd.nextDouble(true, true) * 2.0 - 1.0;
+        return rnd.nextDouble() * 2.0 - 1.0;
     }
 
     /**
@@ -261,9 +265,9 @@ public abstract class MetropolisEnsemble implements IEnsemble {
      * It's up to children classes to call it during the calculation to save intermediate state.
      * <p/>
      * //        saveLongTail();
-     * //        closeLongTail();
+     * //        closeLongTails();
      *
-     * @see #doFrequentCalc()
+     * @see #doFrequentCalc(int)
      * @see #doMidCalc()
      * @see #doRareCalc()
      */

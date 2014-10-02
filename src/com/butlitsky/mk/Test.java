@@ -2,9 +2,7 @@ package com.butlitsky.mk;
 
 import org.apache.commons.math3.util.FastMath;
 
-import java.util.ArrayDeque;
 import java.util.Arrays;
-import java.util.Deque;
 
 /**
  * Tests for different math stuff used in the programm etc.
@@ -22,6 +20,7 @@ import java.util.Deque;
  * Same results.
  */
 public class Test {
+    static double[][] array1, array2, tmp;
 
     public static final int DELAY = 507;
 
@@ -35,7 +34,36 @@ public class Test {
             q += StrictMath.pow(i * 0.0007, i * 0.000003);
             q += Math.exp(i * 0.0000007) - FastMath.exp(i * 0.0000007) + StrictMath.exp(i * 0.0000007);
         }
+        array1 = new double[][]{
+                {0.0, 1, 2, 3},
+                {4, 5, 6, 7},
+                {-1, -2, -3, -4}
+        };
 
+        array2 = new double[][]{
+                {0.0, 0, 0, 0},
+                {1, 1, 1, 1},
+                {-2, -2, -2, -2}
+        };
+
+        System.out.println("array1:");
+        outputArray(array1);
+        System.out.println("array2:");
+        outputArray(array2);
+
+        tmp = array2;
+        array2 = array1;
+        array1 = tmp;
+        tmp = null;
+
+        System.out.println("\tafter switch");
+        System.out.printf("tmp: " + tmp);
+        System.out.println("array1:");
+        outputArray(array1);
+        System.out.println("array2:");
+        outputArray(array2);
+
+        /*
         Deque<Double>[] energies;
 
         energies = new Deque[2];
@@ -59,11 +87,20 @@ public class Test {
 
         testDoubleExp();
 
+        testLog();
         testDoubleSqrt();
 
-        testCubicRoot();
+        testCubicRoot(); */
 
         System.out.printf("\n\n");
+    }
+
+    private static void outputArray(double[][] array) {
+        System.out.println(
+                Arrays.toString(array[0]) + "\n" +
+                        Arrays.toString(array[1]) + "\n" +
+                        Arrays.toString(array[2]) + "\n"
+        );
     }
 
     private static void testCubicRoot() throws InterruptedException {
@@ -311,6 +348,60 @@ public class Test {
         for (int i = 0; i < steps; i++) {
             f += StrictMath.pow(i * base, i * expo);
             f -= StrictMath.pow(++i * base, ++i * expo);
+        }
+
+        System.out.print("" + (double) (System.currentTimeMillis() - ms) / DELAY + "sec.\tf = " + f);
+        Thread.sleep(DELAY);
+    }
+
+    private static void testLog() throws InterruptedException {
+        double initial = -1.02002402;
+        double base = 1.519702130123;
+        int steps = 120000000;
+
+        long ms;
+        double f;
+
+        System.out.println("Testing log() ");
+
+        // -------------------- Math -----------------
+        System.out.println("\n Math: ");
+        f = initial;
+        ms = System.nanoTime();
+
+        for (int i = 1; i < steps; i++) {
+            f += Math.log(i * base);
+            f -= Math.log(++i * base);
+        }
+        System.out.print("" + (double) (System.nanoTime() - ms) / DELAY + "sec.\tf = " + f);
+
+        Thread.sleep(DELAY);
+
+        // ------------------ FastMath ---------------
+        System.out.println("\n  FastMath: ");
+
+        ms = System.currentTimeMillis();
+        f = initial;
+
+
+        for (int i = 1; i < steps; i++) {
+            f += FastMath.log(i * base);
+            f -= FastMath.log(++i * base);
+        }
+        System.out.print("" + (double) (System.currentTimeMillis() - ms) / DELAY + "sec.\tf = " + f);
+
+        Thread.sleep(DELAY);
+
+
+        // ------------------ StrictMath ---------------
+        System.out.println("\n  StrictMath: ");
+
+        ms = System.currentTimeMillis();
+        f = initial;
+
+        for (int i = 1; i < steps; i++) {
+            f += StrictMath.log(i * base);
+            f -= StrictMath.log(++i * base);
         }
 
         System.out.print("" + (double) (System.currentTimeMillis() - ms) / DELAY + "sec.\tf = " + f);

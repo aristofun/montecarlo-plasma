@@ -76,7 +76,7 @@ public class EnsembleController implements IEnsembleController {
                         Deque<double[]>>());
             }
 
-            ensemblesResultValues.get(opt.getT()).put(ens, new ArrayDeque<double[]>(4));
+            ensemblesResultValues.get(opt.getT()).put(ens, new ArrayDeque<double[]>(3));
         }
 
         System.out.println("\n");
@@ -176,7 +176,6 @@ public class EnsembleController implements IEnsembleController {
 
                 for (IEnsemble ens : iEnsembles) {
                     final Deque<double[]> results = getResults(ens);
-
                     writer.write(getScientificResultString(results.peekLast()));
                     writer.newLine();
                 }
@@ -221,7 +220,7 @@ public class EnsembleController implements IEnsembleController {
         if (!Arrays.equals(resValue.peekLast(), results)) {
             resValue.addLast(results);
         }
-        if (resValue.size() > 4) resValue.pollFirst();
+        if (resValue.size() > 3) resValue.pollFirst();
     }
 
     private String getScientificResultString(double[] result) {
@@ -242,7 +241,7 @@ public class EnsembleController implements IEnsembleController {
                 out.append(SHORT_FORMAT.format(o[0]));
                 out.append("|");
                 out.append(SHORT_FORMAT.format(o[1]));
-                out.append("..");
+                out.append(".");
             } else if (o.length > 1) {
                 out.append(SHORT_FORMAT.format(o[0]));
                 out.append("|");
@@ -250,7 +249,7 @@ public class EnsembleController implements IEnsembleController {
             } else {
                 out.append(SHORT_FORMAT.format(o[0]));
             }
-            out.append(",  ");
+            out.append(", ");
         }
         return out.toString();
     }

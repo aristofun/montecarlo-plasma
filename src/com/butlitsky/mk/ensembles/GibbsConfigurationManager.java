@@ -10,6 +10,7 @@ import java.nio.charset.Charset;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.text.NumberFormat;
 import java.util.List;
 
@@ -29,7 +30,11 @@ public class GibbsConfigurationManager {
     private final String myFolder, configFile;
     private Path myConfigPath;
     // private Path myCorrPath;
+
+
     private BufferedWriter longTailWriter;
+    // writer for current point 2 box parameters file
+    private BufferedWriter additionalStateWriter;
 
     private final int Nei;
     private final double[][][] prtcls;
@@ -111,17 +116,22 @@ public class GibbsConfigurationManager {
      * <p/>
      * throws Exception if no valid config could be read (either
      */
-
     private void readCoordinates(List<String> strings) throws Exception {
 //          first line format:
-//          current step, boxBorder, avg. energy 1, avg. energy 2, total Gamma
+// current step, boxBorder, avg. energy 1 (per prtcl), avg density 1, avg. energy 2, avg. density 2, total Gamma
         String firstline = strings.remove(0);
 
         myEnsemble.setCurrStep(Integer.parseInt(firstline.split("\\s+")[0]));
-        myEnsemble.setBoxBorder(Integer.parseInt(firstline.split("\\s+")[1]));
-        myEnsemble.setAvgEnergies(
-                Double.parseDouble(firstline.split("\\s+")[2]),
-                Double.parseDouble(firstline.split("\\s+")[3]));
+        final int boxBorder = Integer.parseInt(firstline.split("\\s+")[1]);
+        myEnsemble.setBoxBorder(boxBorder);
+
+        final double avgE1 = Double.parseDouble(firstline.split("\\s+")[2]);
+        final double density1 = Double.parseDouble(firstline.split("\\s+")[3]);
+        final double avgE2 = Double.parseDouble(firstline.split("\\s+")[4]);
+        final double density2 = Double.parseDouble(firstline.split("\\s+")[5]);
+
+        myEnsemble.setCurrEnergies(avgE1 * boxBorder * 2, avgE2 * (Nei - boxBorder) * 2);
+        myEnsemble.setDensitiesAvg(density1, density2);
 
         if (strings.size() != Nei * 2) {
             throw new IndexOutOfBoundsException("file size doesn't fit particles number");
@@ -141,7 +151,6 @@ public class GibbsConfigurationManager {
     /**
      * fill random arrays of particles, resetting all counters
      */
-
     void initParticlesPosition() {
         final double[] boxSizes = myEnsemble.getBoxSizes();
         final int boxBorder = myEnsemble.getBoxBorder();
@@ -186,18 +195,19 @@ public class GibbsConfigurationManager {
         // create strings list from arrays
         try {
             BufferedWriter writer = Files.newBufferedWriter(myConfigPath, Charset.defaultCharset());
-            final double avgEnergy1 = myEnsemble.getAvgEnergy1();
-            final double avgEnergy2 = myEnsemble.getAvgEnergy2();
+            final double avgEnergy1 = myEnsemble.getAvgEnergy(0);
+            final double avgEnergy2 = myEnsemble.getAvgEnergy(1);
 //          first line format:
-//          current step, boxBorder, avg. energy 1 (per prtcl), avg. energy 2, total Gamma, avg. total (of boxes together) energy perparticle
+//
+// current step, boxBorder, avg. energy 1 (per prtcl), avg density 1, avg. energy 2, avg. density 2, total Gamma
             writer.write(
                     "" + myEnsemble.getCurrStep() + "\t"
                             + myEnsemble.getBoxBorder() + "\t"
-                            + short_format.format(avgEnergy1) + "\t"
-                            + short_format.format(avgEnergy2) + "\t"
-                            + short_format.format(myEnsemble.opt.getGamma())
-                            + short_format.format((avgEnergy1 + avgEnergy2) / (2 * Nei)) +
-                            "\t"
+                            + long_format.format(avgEnergy1) + "\t"
+                            + long_format.format(myEnsemble.getDensitiesAvg()[0]) + "\t"
+                            + long_format.format(avgEnergy2) + "\t"
+                            + long_format.format(myEnsemble.getDensitiesAvg()[1]) + "\t"
+                            + short_format.format(myEnsemble.opt.getGamma()) + "\t"
             );
 
             writer.newLine();
@@ -230,7 +240,7 @@ public class GibbsConfigurationManager {
     }
 
     void applyAdditionalStrategies() {
-        if (saveLongTail) {
+//        if (saveLongTail) {
 /*            try {
                 longTailWriter = Files.newBufferedWriter(
                         GibbsConfigurationManager.getPath(myFolder + "/" + IEnsemble.LONGTAIL_FILE),
@@ -240,19 +250,39 @@ public class GibbsConfigurationManager {
             } catch (Exception e) {
                 System.out.println("ERROR: Can't create " + LONGTAIL_FILE + " for " + myFolder);
             }*/
+//        }
+
+        // open current point adiitonal parameters logging "2box.dat"
+        try {
+            additionalStateWriter = Files.newBufferedWriter(
+                    GibbsConfigurationManager.getPath(myFolder + "/" + GibbsEnsemble.GIBBS_STATE_FILE),
+                    Charset.defaultCharset(), StandardOpenOption.CREATE,
+                    myEnsemble.opt.isOld() ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.WRITE);
+        } catch (Exception e) {
+            System.out.println("ERROR: Can't create " + GibbsEnsemble.GIBBS_STATE_FILE + " for " + myFolder);
         }
     }
 
-    void closeLongTail() {
+    void closeLongTails() {
 /*        if (saveLongTail) try {
             longTailWriter.flush();
             longTailWriter.close();
         } catch (IOException e1) {
             System.out.println("ERROR: can't close long tail writer for " + myFolder);
         } */
+
+        // closing gibbs 2 box state file
+        try {
+            additionalStateWriter.flush();
+            additionalStateWriter.close();
+        } catch (IOException e) {
+            System.out.println("ERROR: can't close " + myFolder + " gibbs state writer!");
+            e.printStackTrace();
+        }
     }
 
-    void saveLongTail() {
+    void workOnMidCalc() {
 /*        if (saveLongTail) try {
             writeCoordinates(longTailWriter);
             longTailWriter.flush();
@@ -262,12 +292,35 @@ public class GibbsConfigurationManager {
     }
 
 
+    public void workOnFrequentCalc(int curr_step) {
+        // write reduced densities and particles numbers in the following format
+        // curr_step, N1, v*1, N2, v*2
+
+        try {
+            additionalStateWriter.write(
+                    curr_step + "\t" +
+                            myEnsemble.getBoxBorder() * 2 + "\t" +
+                            long_format.format(myEnsemble.getVstar(0)) + "\t" +
+                            (Nei - myEnsemble.getBoxBorder()) * 2 + "\t" +
+                            long_format.format(myEnsemble.getVstar(1)) + "\t"
+            );
+            additionalStateWriter.newLine();
+//            System.out.println("written");
+        } catch (IOException e) {
+            System.out.println("ERROR: can't write " + myFolder + " gibbs state to " +
+                                       GibbsEnsemble.GIBBS_STATE_FILE);
+            e.printStackTrace();
+        }
+    }
+
+
     /**
      * Utility method for file seeking
      */
     public static final Path getPath(String path) {
         return FileSystems.getDefault().getPath(".", path);
     }
+
 }
 
 

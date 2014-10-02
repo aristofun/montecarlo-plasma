@@ -536,7 +536,7 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
     }
 
     @Override
-    protected void doFrequentCalc() {
+    protected void doFrequentCalc(int curr_step) {
         // do nothing
     }
 
