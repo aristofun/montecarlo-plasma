@@ -300,9 +300,9 @@ public class GibbsConfigurationManager {
             additionalStateWriter.write(
                     curr_step + "\t" +
                             myEnsemble.getBoxBorder() * 2 + "\t" +
-                            long_format.format(myEnsemble.getVstar(0)) + "\t" +
+                            long_format.format(myEnsemble.getSizeParam(0)) + "\t" +
                             (Nei - myEnsemble.getBoxBorder()) * 2 + "\t" +
-                            long_format.format(myEnsemble.getVstar(1)) + "\t"
+                            long_format.format(myEnsemble.getSizeParam(1)) + "\t"
             );
             additionalStateWriter.newLine();
 //            System.out.println("written");

@@ -20,6 +20,7 @@ public abstract class MetropolisEnsemble implements IEnsemble {
     protected final NumberFormat FORMAT = new DecimalFormat(EOptions.SCIENTIFIC_FORMAT_STR);
     protected final NumberFormat SHORT_FORMAT = new DecimalFormat(EOptions.SHORT_FORMAT_STR);
     protected final NumberFormat MICRO_FORMAT = new DecimalFormat(EOptions.MICRO_FORMAT_STR);
+
     /**
      * Every Nth step to calculate rare or heavy values (e.g. save configuration, correlation etc.)
      * ~ numPart * 7

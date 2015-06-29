@@ -9,22 +9,22 @@ public interface IEnsemble extends Runnable {
     /**
      * in cm
      */
-    public static final double BOHR = 5.2917721092e-9;
+    double BOHR = 5.2917721092e-9;
     /**
      * Elementary charge in SGS
      */
-    public static final double e = 4.8032043e-10;
+    double e = 4.8032043e-10;
 
     /**
      * Boltsmann in SGS
      */
-    public static final double k = 1.3806488e-16;
+    double k = 1.3806488e-16;
 
-    public static final String STATE_FILE = "config.dat";
-    public static final String LONGTAIL_FILE = "all_configs.dat";
-    public static final String CORR_FILE = "correlation.dat";
+    String STATE_FILE = "config.dat";
+    String LONGTAIL_FILE = "all_configs.dat";
+    String CORR_FILE = "correlation.dat";
 
-    public static final int CORR_LENGTH = 90;
+    int CORR_LENGTH = 90;
     /**
      * scaling factor to convert energy value to kT units
      * SCALE_FACTOR == e^2 / (Bohr * k)
@@ -34,7 +34,7 @@ public interface IEnsemble extends Runnable {
     /**
      * current iteration step
      */
-    public int getCurrStep();
+    int getCurrStep();
 
     // Current state Parameters Getters & Setters ++++++++++
 

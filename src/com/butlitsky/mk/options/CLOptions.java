@@ -17,6 +17,7 @@ public class CLOptions {
      * 2 – Harrison algorithm
      * 3 – Pseudo Potential
      * 4 – Gibbs ensemble (two separate boxes)
+     * 5 – Gibbs ensemble (two separate boxes) Lennard-Johnes
      */
     public static int ENSEMBLE_TYPE = 0;
 
@@ -48,7 +49,7 @@ public class CLOptions {
     public static int INITIAL_STEPS = 50000;
 
     /**
-     * Default polochka deepness in kT
+     * Default polochka deepness in kT (Epsilon parameter for Lennard-Johnes case = 1/Tstar)
      */
     public static double POLOCHKA = 4.0;
 
@@ -92,6 +93,11 @@ public class CLOptions {
      * the dynamics of ensembles states migration).
      */
     public static int N_RESOLUTION_STEPS = 1000;
+
+    /**
+     * Initial Ro* parameter for LJ ensemble only
+     */
+    public static double RO_STAR = 0.1;
 
     /**
      * Gibbs maximum relative volume change from 0 to 1
@@ -143,6 +149,15 @@ public class CLOptions {
         if (line.hasOption("gibbs")) { // new in v. 9.0
             ENSEMBLE_TYPE = 4;
             System.out.println("Gibbs ensemble");
+        }
+
+        if (line.hasOption("gibbs_lj")) { // new in v. 11.0
+            ENSEMBLE_TYPE = 5;
+            System.out.println("Gibbs LJ ensemble");
+
+            if (line.hasOption("rostar")) {
+                RO_STAR = Double.parseDouble(line.getOptionValue("rostar"));
+            }
         }
 
         if (line.hasOption("ew")) {
@@ -221,57 +236,66 @@ public class CLOptions {
     @SuppressWarnings("AccessStaticViaInstance")
     private static Options buildOptions() {
         Option temp = OptionBuilder.withArgName("TEMP").hasArg().withDescription("temperature " +
-                "for any ensemble type (overrides mk_config.ini, no default value)")
+                                                                                         "for any ensemble type (overrides mk_config.ini, no default value)")
                 .withLongOpt("temp").create("t");
 
         Option polka = OptionBuilder.withArgName("POLKA").hasArg().withDescription("polochka " +
-                "parameter value (" + POLOCHKA + " default)").withLongOpt("polka").create("po");
+                                                                                           "parameter value (" + POLOCHKA + " default)").withLongOpt(
+                "polka").create("po");
 
         Option workers = OptionBuilder.withArgName("CPUs").hasArg().withDescription("number of " +
-                "parallel threads (default is MAX(2, CPUs/2)").withLongOpt("workers").create("w");
+                                                                                            "parallel threads (default is MAX(2, CPUs/2)").withLongOpt(
+                "workers").create("w");
 
         Option particles = OptionBuilder.withArgName("PARTICLES").hasArg().withDescription
                 ("number of particles, (" + NUM_PARTICLES + " default)").withLongOpt("particles").create("pa");
 
         Option avpoints = OptionBuilder.withArgName("AVG.").hasArg().withDescription("number of " +
-                "averaging points for Energy (default is number of total workingssteps!)")
+                                                                                             "averaging points for Energy (default is number of total workingssteps!)")
                 .withLongOpt("avpoints").create("ap");
 
-        Option nResolution = OptionBuilder.withArgName("NUM").hasArg().withDescription("number " +
-                "of averaging points for current values plotting (default is " +
-                N_RESOLUTION_STEPS + " steps)").withLongOpt("resolution").create("res");
 
         Option steps = OptionBuilder.withArgName("STEPS").hasArg().withDescription("number of " +
-                "steps (" + DEFAULT_NUM_STEPS + " by default)").withLongOpt("steps").create("stp");
+                                                                                           "steps (" + DEFAULT_NUM_STEPS + " by default)").withLongOpt(
+                "steps").create("stp");
 
         Option delta = OptionBuilder.withArgName("MAX_dX").hasArg()
                 .withDescription("maxDx coeff. number * average distance between particles " +
-                        "(depends on density) along every axis (" + MAX_DELTA_X + " default)")
+                                         "(depends on density) along every axis (" + MAX_DELTA_X + " default)")
                 .withLongOpt("delta").create("d");
 
-        Option deltav = OptionBuilder.withArgName("MAX_dV/V").hasArg()
-                .withDescription(" Gibbs maximum relative volume change from 0 to 1 (default is " +
-                        MAX_DELTA_V + " )").withLongOpt("deltav").create("dv");
 
         Option refresh = OptionBuilder.withArgName("SECONDS").hasArg()
                 .withDescription("threads status refresh interval (" + REFRESH_DELAY / 1000 +
-                        "sec. default)").withLongOpt("refresh").create("r");
+                                         "sec. default)").withLongOpt("refresh").create("r");
 
-        Option ewaldDelta = OptionBuilder.withArgName("NUM").hasArg().withDescription("Ewald " +
-                "accuracy delta parameter (" + EWALD_DELTA + " default)").withLongOpt("ewaldelta")
-                .create("ewd");
+        Option ewaldDelta = OptionBuilder.withArgName("NUM").hasArg().withDescription("Ewald accuracy delta parameter ("
+                                                                                              + EWALD_DELTA + " default)").withLongOpt(
+                "ewaldelta").create("ewd");
 
-        Option ewaldNcut = OptionBuilder.withArgName("NUM").hasArg().withDescription("Ewald" +
-                "cutoff parameter (" + EWALD_N_CUTOFF + " default)").withLongOpt("ewaldn")
-                .create("ewn");
+        Option ewaldNcut = OptionBuilder.withArgName("NUM").hasArg().withDescription("Ewald cutoff parameter (" + EWALD_N_CUTOFF + " default)").withLongOpt(
+                "ewaldn").create("ewn");
 
-        Option harrisR = OptionBuilder.withArgName("NUM").hasArg().withDescription("Harris " +
-                "radius. When set Harris algorithm used with given R in L (" + HARRISON_N + " default)")
+        Option harrisR = OptionBuilder.withArgName("NUM").hasArg().withDescription(
+                "Harris radius. When set Harris algorithm used with given R in L (" + HARRISON_N + " default)")
                 .withLongOpt("harris").create("harris");
 
         Option stepsToPass = OptionBuilder.withArgName("INI_STEPS").hasArg().withDescription
                 ("Number of steps to ignore in markov chain averages (default " + INITIAL_STEPS + ")")
                 .withLongOpt("inisteps").create("inisteps");
+
+//        Gibbs specific options
+        Option deltav = OptionBuilder.withArgName("MAX_dV/V").hasArg()
+                .withDescription(" Gibbs maximum relative volume change from 0 to 1 (default is " +
+                                         MAX_DELTA_V + " )").withLongOpt("deltav").create("dv");
+
+        Option rostar = OptionBuilder.withArgName("RO_STAR").hasArg()
+                .withDescription("Initial Lennard-Johnes Ro* parameter (0.1 default)")
+                .withLongOpt("rostar").create("rostar");
+
+        Option nResolution = OptionBuilder.withArgName("NUM").hasArg().withDescription(
+                "number of averaging points for current values plotting (default is " + N_RESOLUTION_STEPS + " steps)")
+                .withLongOpt("resolution").create("res");
 
         Options options = new Options();
 
@@ -292,8 +316,10 @@ public class CLOptions {
 
 //      Gibbs options
         options.addOption("gibbs", false, "use Gibbs ensemble (two box simulation)");
+        options.addOption("gibbs_lj", false, "Use gibbse ensemble calculation for Lennard-Johnes "); // new in v. 11.0
         options.addOption(deltav);
         options.addOption(nResolution);
+        options.addOption(rostar);
 
 //      Ewald options
         options.addOption("ew", false, "use Ewald summation");

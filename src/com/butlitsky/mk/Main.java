@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "10.6 * Gibbse Ensemble: optimized delta V performance";
+    public static final String version = "11.0 + Lennard-Johns ensemble added";
 
     /**
      * <pre>
@@ -38,6 +38,8 @@ public class Main {
      *  –inisteps                   number of initial steps to ignore in averages calculations
      *
      *  –gibbs                      Use gibbse ensemble calculation (two boxes of total V and N)
+     *  –gibbs_lj                   Use gibbse ensemble calculation for Lennard-Johnes potetial (two boxes of total V and N)
+     *  –rostar                     Initial Lennard-Johnes Ro* parameter (default 0.1)
      *  –res, --resolution          Gibbs technique N step delta for per point current values plotting
      *  –dv, --deltav               Gibbs maximum relative volume change from 0 to 1 (default 0.15)
      * </pre>
@@ -45,7 +47,7 @@ public class Main {
     public static void main(String[] args) {
 
         Date start = new Date();
-        System.out.println("\nMonte-Karlo game v. " + version + ", (c) Michael Butlitsky 2013+\n");
+        System.out.println("\nMonte-Karlo game v. " + version + ", (c) Michael Butlitsky 2013 + \n");
 
         // apache CLI lib options parser
 

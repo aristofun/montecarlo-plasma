@@ -80,7 +80,7 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
 
     // density (1/cm^-3) for past 'resolution' steps accumulator (each box)
     private final double[] densitiesSum = new double[2];
-    private final double[] densitiesAvg = new double[2]; // average densite for past 'resolution' steps
+    private final double[] densitiesAvg = new double[2]; // average density for past 'resolution' steps
     private int densitiesIterations = 0;
 
     // ------------ Gibbs additional options ---------------------
@@ -915,23 +915,29 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
     @Override
     public double[] getCurrentResult() {
         return new double[]{
-                gamma(densitiesAvg[0]),
+                scndryParam(densitiesAvg[0]),
                 reducedEnrgyAvg[0],
-                gamma(densitiesAvg[1]),
+                scndryParam(densitiesAvg[1]),
                 reducedEnrgyAvg[1],
         };
     }
 
     /**
+     * Returns secondary parameter value for result printer.
+     *
      * @return gamma for given density in cm^-3. For current ensemble, using its T value
+     * OR may be overriden for Ro* on Lennard–Johnes ensemble etc.
+     *
+     * TODO: refactor good with getCurrentResult method
      */
-    private final double gamma(double density) {return e * e * FastMath.cbrt(density) / (k * T);}
+    protected double scndryParam(double density) {return e * e * FastMath.cbrt(density) / (k * T);}
 
     /**
+     * Current size parameter for the box (V* for polochka, Ro* for LJ)
      * @param box for which box
      * @return current reduced volume for given box (1/gamma^3) in the ensemble
      */
-    protected final double getVstar(int box) {
+    protected double getSizeParam(int box) {
         final double onegamma = (k * T) / (e * e);
         return onegamma * onegamma * onegamma / densitiesAvg[box];
     }
