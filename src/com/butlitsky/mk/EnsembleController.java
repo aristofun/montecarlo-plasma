@@ -1,7 +1,7 @@
 package com.butlitsky.mk;
 
-import com.butlitsky.mk.ensembles.GibbsConfigurationManager;
 import com.butlitsky.mk.ensembles.EnsemblesFactory;
+import com.butlitsky.mk.ensembles.GibbsConfigurationManager;
 import com.butlitsky.mk.options.CLOptions;
 import com.butlitsky.mk.options.EOptions;
 
@@ -147,7 +147,6 @@ public class EnsembleController implements IEnsembleController {
     }
 
     private void drawStatus() {
-
         System.out.println("\n\n"); // clear screen
         System.out.println(CLOptions.getOneLineSummary());
         System.out.println("-------------------------------------------------------------------------------------");
@@ -166,9 +165,8 @@ public class EnsembleController implements IEnsembleController {
         try {
             for (Integer currentKey : ensemblesResultValues.keySet()) {
                 BufferedWriter writer = Files.newBufferedWriter(
-                        GibbsConfigurationManager.getPath(currentKey + "K_" + CLOptions.NUM_PARTICLES + "pa_d" +
-                                                                  CLOptions.MAX_DELTA_X + "_results" + ".txt"),
-                        Charset.defaultCharset());
+                        GibbsConfigurationManager.getPath(currentKey + "K_" + CLOptions.NUM_PARTICLES + "pa_d" + CLOptions.MAX_DELTA_X + "_results" + ".txt"),
+                        Charset.forName("UTF-8"));
 
                 Set<IEnsemble> iEnsembles = ensemblesResultValues.get(currentKey).keySet();
                 writer.write("#" + currentKey + "  " + iEnsembles);
@@ -208,8 +206,8 @@ public class EnsembleController implements IEnsembleController {
         // warning – ensemble must implement toString() with meaningful tag for the next line
         // to write something useful
         System.out.println(current + "     \t#" + current.getCurrStep() +
-                " (" + (int) (100 * ((float) current.getCurrStep() + 1) / current.getNumSteps())
-                + "%)" + "\t[" + results + "]\t" + (currentRunning ? "" : " finished"));
+                                   " (" + (int) (100 * ((float) current.getCurrStep() + 1) / current.getNumSteps())
+                                   + "%)" + "\t[" + results + "]\t" + (currentRunning ? "" : " finished"));
     }
 
 

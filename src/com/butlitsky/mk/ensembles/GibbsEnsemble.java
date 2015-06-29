@@ -69,7 +69,7 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
 
     private float acceptance = 0; // acceptance rate
     private int acceptCnt = 0; // acceptance rate counter
-    private int acceptIterations = 0;
+    private int acceptTotalIterations = 0;
 
     // --------------- Results accumulators -------------------------
     private final int avgPoints;
@@ -255,7 +255,7 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
      * densities for past 'resolution' steps are accumulated to calculate averages
      */
     private void everyStepCalcs() {
-        acceptIterations++;
+        acceptTotalIterations++;
 
         densitiesIterations++;
         //  density is in cm^-3 !!!
@@ -307,10 +307,10 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
     @Override
     protected void doFrequentCalc(int curr_step) {
         // record acceptance rate & reset counter
-        acceptance = ((1 + ((float) acceptCnt / acceptIterations)) / 2);
+        acceptance = ((1 + ((float) acceptCnt / acceptTotalIterations)) / 2);
         acceptCnt = 0;
-        System.out.println("frequent calc (acceptance/iterations): " + acceptance + " / " + acceptIterations);
-        acceptIterations = 0;
+        System.out.println("frequent calc (acceptance/iterations): " + acceptance + " / " + acceptTotalIterations);
+        acceptTotalIterations = 0;
 
         // record densities
         densitiesAvg[0] = densitiesSum[0] / densitiesIterations;
@@ -554,17 +554,16 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
         scaleTrialPrtcls();
 
         // 1. find prtcls and trialPrtcls array potential energies
-        final double prtclsE = getCurrentPotential(prtcls, 0, halfBox[0])
-                + getCurrentPotential(prtcls, 1, halfBox[1]);
+        final double prtclsE_box1 = getCurrentPotential(prtcls, 0, halfBox[0]);
+        final double prtclsE_box2 = getCurrentPotential(prtcls, 1, halfBox[1]);
 
-        final double trialE = getCurrentPotential(trialPrtcls, 0, trialBoxSize[0] / 2.0)
-                + getCurrentPotential(trialPrtcls, 1, trialBoxSize[1] / 2.0);
+//        potential energy is proportional to ~ R
+        final double trialE_box1 = prtclsE_box1 * (trialBoxSize[0] / boxSize[0]);
+        final double trialE_box2 = prtclsE_box2 * (trialBoxSize[1] / boxSize[1]);
 
-        final double NVcoeff =
-                Math.log(trialV0 / V[0]) * lengths[0] * 2
-                        + Math.log((V[1] - deltaV) / V[1]) * lengths[1] * 2;
+        final double NVcoeff = Math.log(trialV0 / V[0]) * lengths[0] * 2 + Math.log((V[1] - deltaV) / V[1]) * lengths[1] * 2;
 
-        double res = FastMath.exp(NVcoeff + prtclsE - trialE);
+        double res = FastMath.exp(NVcoeff + prtclsE_box1 + prtclsE_box2 - trialE_box1 - trialE_box2);
 
         // XXX todo: remove after debug
 //        System.out.println("deltaE:  " + (trialE - prtclsE) + ", deltaV: " + deltaV);
@@ -624,8 +623,7 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
         final int toBox = 1 - fromBox;
 
         // (N2 - 2)*V1/(N1 + 2)*V2 – transfer from 2 -> 1
-        final double expoCoefficient =
-                (lengths[fromBox] - 1) * V[toBox] / (V[fromBox] * (lengths[toBox] + 1));
+        final double expoCoefficient = (lengths[fromBox] - 1) * V[toBox] / (V[fromBox] * (lengths[toBox] + 1));
 
         // XXX todo: remove after debug
 //        long start = System.currentTimeMillis();
@@ -668,10 +666,10 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
     }
 
     /**
-     * calculates the potential energy value of a given pair inside a box (in the main 'prtcls'
+     * Calculates the potential energy value of a given pair inside a box (in the main 'prtcls'
      * array)
      *
-     * @param box       box ralative to which potential is calculated
+     * @param box       box relative to which potential is calculated
      * @param pairIndex which pair inside prtcls to calculate
      * @param x         double[] {[type1], [type2]} – x coordinates of the pair (either current or test)
      * @param y         double[] {[type1], [type2]} – y coordinates of the pair (either current or test)
@@ -952,7 +950,7 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
 
     double[] getBoxSizes() {return boxSize; }
 
-    void setCurrEnergies(double en1, double en2) {
+    void setCurrReducedEnergies(double en1, double en2) {
         currentEnergy[0] = en1;
         currentEnergy[1] = en2;
     }

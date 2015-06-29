@@ -117,6 +117,10 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
         loadFromStateFile();
         initEnergy();
         applyAdditionalStrategies();
+
+        if (!opt.isOld()) {      // save initially creted config for the first time
+            saveConfiguration();
+        }
     }
 
     /**
@@ -137,7 +141,7 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
         if (saveLongTail) {
             try {
                 longTailWriter = Files.newBufferedWriter(GibbsConfigurationManager.getPath(myFolder + "/" + LONGTAIL_FILE),
-                                                         Charset.defaultCharset(),
+                                                         Charset.forName("UTF-8"),
                                                          StandardOpenOption.CREATE,
                                                          opt.isOld() ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING,
                                                          StandardOpenOption.WRITE);
@@ -167,7 +171,7 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
         if (opt.isOld()) {
             if (Files.exists(myConfigPath)) {
                 try {
-                    loadArrays(Files.readAllLines(myConfigPath, Charset.defaultCharset()));
+                    loadArrays(Files.readAllLines(myConfigPath, Charset.forName("UTF-8")));
                 } catch (Exception e) {
                     System.out.println("WARNING: failed to read config for " + myFolder);
                     System.out.println(e.getLocalizedMessage());
@@ -181,7 +185,6 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
         if (!opt.isOld()) {
             System.out.print("! from scratch");
             initParticlesPosition(); // initial distribution, reset counters
-            saveConfiguration();
         }
 
         System.out.println();
@@ -391,7 +394,7 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
         }
 
         try {
-            Files.write(myCorrPath, strings, Charset.defaultCharset());
+            Files.write(myCorrPath, strings, Charset.forName("UTF-8"));
         } catch (IOException e) {
             e.printStackTrace();
             System.out.println("ERROR: failed to save correlation for " + myFolder);
@@ -403,7 +406,7 @@ public abstract class NVTEnsemble extends MetropolisEnsemble {
 
         // create strings list from arrays
         try {
-            BufferedWriter writer = Files.newBufferedWriter(myConfigPath, Charset.defaultCharset());
+            BufferedWriter writer = Files.newBufferedWriter(myConfigPath, Charset.forName("UTF-8"));
 
             writer.write("" + getCurrStep() + "\t"
                                  + FORMAT.format(avgEnergy) + "\t"

@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "10.3 + new Gibbse Ensemble: beta tests";
+    public static final String version = "10.6 * Gibbse Ensemble: optimized delta V performance";
 
     /**
      * <pre>

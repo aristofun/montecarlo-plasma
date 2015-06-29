@@ -90,7 +90,7 @@ public class GibbsConfigurationManager {
         if (recover) {
             if (Files.exists(myConfigPath)) {
                 try {
-                    readCoordinates(Files.readAllLines(myConfigPath, Charset.defaultCharset()));
+                    readCoordinates(Files.readAllLines(myConfigPath, Charset.forName("UTF-8")));
                     System.out.print(": config loaded - ok");
                 } catch (Exception e) {
                     System.out.println("WARNING: failed to read config for " + myFolder);
@@ -130,7 +130,7 @@ public class GibbsConfigurationManager {
         final double avgE2 = Double.parseDouble(firstline.split("\\s+")[4]);
         final double density2 = Double.parseDouble(firstline.split("\\s+")[5]);
 
-        myEnsemble.setCurrEnergies(avgE1 * boxBorder * 2, avgE2 * (Nei - boxBorder) * 2);
+        myEnsemble.setCurrReducedEnergies(avgE1, avgE2);
         myEnsemble.setDensitiesAvg(density1, density2);
 
         if (strings.size() != Nei * 2) {
@@ -194,7 +194,7 @@ public class GibbsConfigurationManager {
     void saveConfiguration() {
         // create strings list from arrays
         try {
-            BufferedWriter writer = Files.newBufferedWriter(myConfigPath, Charset.defaultCharset());
+            BufferedWriter writer = Files.newBufferedWriter(myConfigPath, Charset.forName("UTF-8"));
             final double avgEnergy1 = myEnsemble.getAvgEnergy(0);
             final double avgEnergy2 = myEnsemble.getAvgEnergy(1);
 //          first line format:
@@ -256,7 +256,7 @@ public class GibbsConfigurationManager {
         try {
             additionalStateWriter = Files.newBufferedWriter(
                     GibbsConfigurationManager.getPath(myFolder + "/" + GibbsEnsemble.GIBBS_STATE_FILE),
-                    Charset.defaultCharset(), StandardOpenOption.CREATE,
+                    Charset.forName("UTF-8"), StandardOpenOption.CREATE,
                     myEnsemble.opt.isOld() ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING,
                     StandardOpenOption.WRITE);
         } catch (Exception e) {
