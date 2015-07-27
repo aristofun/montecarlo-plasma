@@ -18,6 +18,7 @@ public class CLOptions {
      * 3 – Pseudo Potential
      * 4 – Gibbs ensemble (two separate boxes)
      * 5 – Gibbs ensemble (two separate boxes) Lennard-Johnes
+     * 6 – Gibbs ensemble (two different boxes) Lennard-Johnes2
      */
     public static int ENSEMBLE_TYPE = 0;
 
@@ -100,6 +101,16 @@ public class CLOptions {
     public static double RO_STAR = 0.1;
 
     /**
+     * Initial Ro* parameters for LJ2 ensemble only
+     */
+    public static double RO_STAR1 = 0.1, RO_STAR2 = 0.1;
+
+    /**
+     * Initial N parameters for LJ2 ensemble only
+     */
+    public static int N1 = NUM_PARTICLES, N2 = NUM_PARTICLES;
+
+    /**
      * Gibbs maximum relative volume change from 0 to 1
      */
     public static double MAX_DELTA_V = 0.07;
@@ -157,6 +168,25 @@ public class CLOptions {
 
             if (line.hasOption("rostar")) {
                 RO_STAR = Double.parseDouble(line.getOptionValue("rostar"));
+            }
+        }
+
+        if (line.hasOption("gibbs_lj2")) { // new in v. 12.0
+            ENSEMBLE_TYPE = 6;
+            System.out.println("Gibbs LJ2 ensemble");
+
+            if (line.hasOption("rostar1")) {
+                RO_STAR1 = Double.parseDouble(line.getOptionValue("rostar1"));
+            }
+            if (line.hasOption("rostar2")) {
+                RO_STAR2 = Double.parseDouble(line.getOptionValue("rostar2"));
+            }
+
+            if (line.hasOption("n1")) {
+                N1 = Integer.parseInt(line.getOptionValue("n1"));
+            }
+            if (line.hasOption("n2")) {
+                N2 = Integer.parseInt(line.getOptionValue("n2"));
             }
         }
 
@@ -289,9 +319,27 @@ public class CLOptions {
                 .withDescription(" Gibbs maximum relative volume change from 0 to 1 (default is " +
                                          MAX_DELTA_V + " )").withLongOpt("deltav").create("dv");
 
+//        new in 11.0
         Option rostar = OptionBuilder.withArgName("RO_STAR").hasArg()
                 .withDescription("Initial Lennard-Johnes Ro* parameter (0.1 default)")
                 .withLongOpt("rostar").create("rostar");
+
+//        new in 12.0
+        Option rostar1 = OptionBuilder.withArgName("RO_STAR").hasArg()
+                .withDescription("Initial Lennard-Johnes Ro* 1st box (0.1 default)")
+                .withLongOpt("rostar1").create("rostar1");
+        Option rostar2 = OptionBuilder.withArgName("RO_STAR").hasArg()
+                .withDescription("Initial Lennard-Johnes Ro* 2nd box (0.1 default)")
+                .withLongOpt("rostar2").create("rostar2");
+
+//        new in 12.0
+        Option n1 = OptionBuilder.withArgName("N").hasArg()
+                .withDescription("Initial Lennard-Johnes N 1st box (0.1 default)")
+                .withLongOpt("n1").create("n2");
+        Option n2 = OptionBuilder.withArgName("N").hasArg()
+                .withDescription("Initial Lennard-Johnes N 2nd box (0.1 default)")
+                .withLongOpt("n2").create("n2");
+
 
         Option nResolution = OptionBuilder.withArgName("NUM").hasArg().withDescription(
                 "number of averaging points for current values plotting (default is " + N_RESOLUTION_STEPS + " steps)")
@@ -317,9 +365,16 @@ public class CLOptions {
 //      Gibbs options
         options.addOption("gibbs", false, "use Gibbs ensemble (two box simulation)");
         options.addOption("gibbs_lj", false, "Use gibbse ensemble calculation for Lennard-Johnes "); // new in v. 11.0
+        options.addOption("gibbs_lj2",
+                          false,
+                          "Use gibbse ensemble 2 calculation for Lennard-Johnes "); // new in v. 12.0
         options.addOption(deltav);
         options.addOption(nResolution);
         options.addOption(rostar);
+        options.addOption(rostar1);
+        options.addOption(rostar2);
+        options.addOption(n1);
+        options.addOption(n2);
 
 //      Ewald options
         options.addOption("ew", false, "use Ewald summation");

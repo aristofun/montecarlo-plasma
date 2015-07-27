@@ -46,6 +46,10 @@ public class GibbsEnsemblePolochka extends GibbsEnsemble {
         }
     }
 
+    @Override
+    protected double deltaTrialPotential() {
+        return deltaTrialPotentialCoulomb();
+    }
 
     @Override
     /**

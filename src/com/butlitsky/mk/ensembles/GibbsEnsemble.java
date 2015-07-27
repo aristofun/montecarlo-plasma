@@ -27,11 +27,11 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
     private GibbsConfigurationManager config;
 
     // ------------------- Common physics ------------------------
-    private final int N; // total particles number N = Nei*2
-    private final int Nei; // total particles pairs number N = Nei*2
-    private final double Volume; // total Volume (in cm^-3)
-    protected final int T; // temperature (in K)
-    private final double Gamma; // total initial point gamma
+    protected int N; // total particles number N = Nei*2
+    protected int Nei; // total particles pairs number N = Nei*2
+    protected double Volume; // total Volume (in cm^-3)
+    protected int T; // temperature (in K)
+//    protected double Gamma; // total initial point gamma
 
     // ---------–––––––– Common Monte-Carlo ----------------------
 
@@ -56,23 +56,23 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
 
     // current box border index in the array of particles' positions
     // [0...boxborder) – BOX 1; [boxBorder...Nei) – BOX 2
-    private int boxBorder;
+    protected int boxBorder;
 
-    private final double[] V = new double[2]; // V1, V2 in cm^-3
-    private final double[] boxSize = new double[2]; // in Bohrs
-    private final double[] halfBox = new double[2]; // in Bohrs
-    private final int[] lengths = new int[2]; // [0] == boxBorder, [1] == Nei-boxBorder
+    protected final double[] V = new double[2]; // V1, V2 in cm^-3
+    protected final double[] boxSize = new double[2]; // in Bohrs
+    protected double[] halfBox = new double[2]; // in Bohrs
+    protected int[] lengths = new int[2]; // [0] == boxBorder, [1] == Nei-boxBorder
 
     // must be recalclated on every volume chane
-    private final double[] deltaX = new double[2];
-    private final double maxDXfactor;
+    protected final double[] deltaX = new double[2];
+    protected double maxDXfactor;
 
     private float acceptance = 0; // acceptance rate
     private int acceptCnt = 0; // acceptance rate counter
     private int acceptTotalIterations = 0;
 
     // --------------- Results accumulators -------------------------
-    private final int avgPoints;
+    private final int avgPoints = CLOptions.NUM_ENERGY_AVG_STEPS;
     private final double[] reducedEnrgyAvg = new double[2];
     private final Deque<Double>[] reducedEnergies = new Deque[2];
 
@@ -84,7 +84,7 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
     private int densitiesIterations = 0;
 
     // ------------ Gibbs additional options ---------------------
-    private final double maxDeltaV;
+    protected double maxDeltaV;
     // what move was made: 0. move random particle or 1. change V or 2. interchange particles
     private int lastStepType = 0;
     // what box was changed during last MC step: 0,1 or -1 (meaning both)
@@ -101,7 +101,7 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
         T = opt.getT();
         Volume = N / (2 * opt.getDensity());       // V is in CM^3 !!!
 
-        Gamma = opt.getGamma();
+//        Gamma = opt.getGamma();
         maxDXfactor = opt.getMaxDelta();
         maxDeltaV = CLOptions.MAX_DELTA_V;
 
@@ -121,21 +121,28 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
         System.out.println(myFolder + ": boxBorder=" + boxBorder + ", " +
                                    "deltaV=" + SHORT_FORMAT.format(maxDeltaV));
 
-        System.out.println("gamma=" + SHORT_FORMAT.format(Gamma) + ", " + "V(cm-3)=" +
-                                   SHORT_FORMAT.format(Volume) + ", deltaX1="
-                                   + SHORT_FORMAT.format(deltaX[0]));
+        System.out.println(
+//                "gamma=" + SHORT_FORMAT.format(Gamma) + ", " +
+                "V(cm-3)=" + SHORT_FORMAT.format(Volume) +
+                        ", deltaX1=" + SHORT_FORMAT.format(deltaX[0]));
+        initParticlesConfig();
+    }
 
+    protected void initParticlesConfig() {
         // initializing particles configuration: [e,i][X,Y,Z][0...Nei]
         prtcls = new double[2][3][Nei];
         trialPrtcls = new double[2][3][Nei];
 
-        avgPoints = CLOptions.NUM_ENERGY_AVG_STEPS;
-        System.out.print(", AVG.=" + avgPoints);
+        System.out.print(", AVG. = " + avgPoints);
 
         reducedEnergies[0] = new ArrayDeque<>(avgPoints);
         reducedEnergies[1] = new ArrayDeque<>(avgPoints);
 
         config = new GibbsConfigurationManager(this);
+    }
+
+    public GibbsEnsemble(EOptions options, int nResolutionSteps, int i, int i1) {
+        super(options, nResolutionSteps, i, i1);
     }
 
     /**
@@ -144,7 +151,7 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
      * @param afterTestV if true – trialBoxSize[] is used as a source,
      *                   otherwise - calculated based on current V[] data
      */
-    private final void updateBoxSizes(boolean afterTestV) {
+    protected final void updateBoxSizes(boolean afterTestV) {
         if (afterTestV) {
             boxSize[0] = trialBoxSize[0];
             boxSize[1] = trialBoxSize[1];
@@ -159,7 +166,7 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
     /**
      * Call only after {@link #updateBoxSizes(boolean)} and {@link #updateLengths()}!
      */
-    private final void updateDeltaX() {// new in 8.0 – CLI params always multiplied by avgDistance
+    protected final void updateDeltaX() {// new in 8.0 – CLI params always multiplied by avgDistance
         deltaX[0] = (maxDXfactor == 0.0) ? boxSize[0] : maxDXfactor
                 * FastMath.cbrt(V[0] / (2 * lengths[0])) / BOHR;
 
@@ -170,7 +177,7 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
     /**
      * Call only after boxBorder updated!
      */
-    private final void updateLengths() {
+    protected final void updateLengths() {
         lengths[0] = boxBorder;
         lengths[1] = Nei - boxBorder;
     }
@@ -451,8 +458,8 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
      * @param whichBox
      * @return potential energy for current coords
      */
-    private final double getCurrentPotential(final double[][][] particls, final int whichBox,
-                                             final double half_box) {
+    protected final double getCurrentPotential(final double[][][] particls, final int whichBox,
+                                               final double half_box) {
         double newPot = 0.0;
         final int length = lengths[whichBox];
         final int offset = whichBox * boxBorder;
@@ -553,17 +560,9 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
         // 0. fill trialPrtcls array
         scaleTrialPrtcls();
 
-        // 1. find prtcls and trialPrtcls array potential energies
-        final double prtclsE_box1 = getCurrentPotential(prtcls, 0, halfBox[0]);
-        final double prtclsE_box2 = getCurrentPotential(prtcls, 1, halfBox[1]);
-
-//        potential energy is proportional to ~ R
-        final double trialE_box1 = prtclsE_box1 * (trialBoxSize[0] / boxSize[0]);
-        final double trialE_box2 = prtclsE_box2 * (trialBoxSize[1] / boxSize[1]);
-
         final double NVcoeff = Math.log(trialV0 / V[0]) * lengths[0] * 2 + Math.log((V[1] - deltaV) / V[1]) * lengths[1] * 2;
 
-        double res = FastMath.exp(NVcoeff + prtclsE_box1 + prtclsE_box2 - trialE_box1 - trialE_box2);
+        double res = FastMath.exp(NVcoeff - deltaTrialPotential());
 
         // XXX todo: remove after debug
 //        System.out.println("deltaE:  " + (trialE - prtclsE) + ", deltaV: " + deltaV);
@@ -579,6 +578,37 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
 //            e1.printStackTrace();
 //        }
         return res;
+    }
+
+
+    /**
+     * Scaled coulomb version. Doesn't work for arbitrary potential
+     */
+    protected double deltaTrialPotentialCoulomb() {
+        // 1. find prtcls and trialPrtcls array potential energies
+        final double prtclsE_box1 = getCurrentPotential(prtcls, 0, halfBox[0]);
+        final double prtclsE_box2 = getCurrentPotential(prtcls, 1, halfBox[1]);
+
+//        potential energy is proportional to ~ R          !!! — NOT THE CASE in LennardJohnes!!!
+        final double trialE_box1 = prtclsE_box1 * (trialBoxSize[0] / boxSize[0]);
+        final double trialE_box2 = prtclsE_box2 * (trialBoxSize[1] / boxSize[1]);
+
+        return (trialE_box1 + trialE_box2) - (prtclsE_box1 + prtclsE_box2);
+    }
+
+    /**
+     * Must return current prtcls potential minus trialPrtcls potential energy: NewE - OldE
+     * <p/>
+     * Calculates "V LOB" by default
+     */
+    protected double deltaTrialPotential() {
+        // 1. find prtcls and trialPrtcls array potential energies
+        final double prtclsE = getCurrentPotential(prtcls, 0, halfBox[0]) + getCurrentPotential(prtcls, 1, halfBox[1]);
+
+        final double trialE = getCurrentPotential(trialPrtcls, 0, trialBoxSize[0] / 2.0)
+                + getCurrentPotential(trialPrtcls, 1, trialBoxSize[1] / 2.0);
+
+        return trialE - prtclsE;
     }
 
     /**
@@ -927,13 +957,14 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
      *
      * @return gamma for given density in cm^-3. For current ensemble, using its T value
      * OR may be overriden for Ro* on Lennard–Johnes ensemble etc.
-     *
+     * <p/>
      * TODO: refactor good with getCurrentResult method
      */
     protected double scndryParam(double density) {return e * e * FastMath.cbrt(density) / (k * T);}
 
     /**
      * Current size parameter for the box (V* for polochka, Ro* for LJ)
+     *
      * @param box for which box
      * @return current reduced volume for given box (1/gamma^3) in the ensemble
      */

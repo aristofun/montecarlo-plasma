@@ -83,8 +83,7 @@ public abstract class MetropolisEnsemble implements IEnsemble {
     private final ThreadLocalRandom localRnd;
 
 
-    protected MetropolisEnsemble(EOptions options, int frequentInterval, int midInterval,
-                                 int rareInterval) {
+    protected MetropolisEnsemble(EOptions options, int frequentInterval, int midInterval, int rareInterval) {
         rnd = new MersenneTwisterFast();
         localRnd = ThreadLocalRandom.current();
 
@@ -111,6 +110,7 @@ public abstract class MetropolisEnsemble implements IEnsemble {
 
     /**
      * Java simple randomizer
+     *
      * @return random number in region [0; number)
      */
     protected int nextInt(int number) {

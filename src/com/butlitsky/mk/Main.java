@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "11.0 + Lennard-Johns ensemble added";
+    public static final String version = "12.3 / Fixed Lennard-Johns scaling dV potential ";
 
     /**
      * <pre>
@@ -39,7 +39,12 @@ public class Main {
      *
      *  –gibbs                      Use gibbse ensemble calculation (two boxes of total V and N)
      *  –gibbs_lj                   Use gibbse ensemble calculation for Lennard-Johnes potetial (two boxes of total V and N)
+     *  –gibbs_lj2                   Use gibbse ensemble calculation for Lennard-Johnes potetial (two different boxes)
      *  –rostar                     Initial Lennard-Johnes Ro* parameter (default 0.1)
+     *  –rostar1                     Initial Lennard-Johnes Ro* parameter for first box (default 0.1)
+     *  –rostar2                     Initial Lennard-Johnes Ro* parameter for second box (default 0.1)
+     *  –N1                          Initial Lennard-Johnes N particles parameter for 1st box (default 0.1)
+     *  –N2                          Initial Lennard-Johnes N parameter for 2nd box (default 0.1)
      *  –res, --resolution          Gibbs technique N step delta for per point current values plotting
      *  –dv, --deltav               Gibbs maximum relative volume change from 0 to 1 (default 0.15)
      * </pre>

@@ -36,6 +36,10 @@ public class EnsemblesFactory {
                 ensemble = new GibbsEnsembleLJ(opt);
                 ensemble.loadState();
                 break;
+            case 6:
+                ensemble = new GibbsEnsembleLJ2(opt);
+                ensemble.loadState();
+                break;
             default:
                 ensemble = new NVTEnsemblePolochka(opt);
                 ensemble.loadState();
