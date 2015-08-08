@@ -55,7 +55,7 @@ public class GibbsConfigurationManager {
         myFolder = ensemble.myFolder;
         configFile = IEnsemble.STATE_FILE;
 
-        Nei = ensemble.opt.getNumParticles() / 2;
+        Nei = ensemble.Nei;
 
         myConfigPath = GibbsConfigurationManager.getPath(myFolder + "/" + configFile);
 

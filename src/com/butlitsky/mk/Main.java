@@ -7,7 +7,7 @@ import java.util.Locale;
 
 @SuppressWarnings("AccessStaticViaInstance")
 public class Main {
-    public static final String version = "12.3 / Fixed Lennard-Johns scaling dV potential ";
+    public static final String version = "13.0 / non-uniform LJ2 ensemble steps types";
 
     /**
      * <pre>
@@ -40,6 +40,7 @@ public class Main {
      *  –gibbs                      Use gibbse ensemble calculation (two boxes of total V and N)
      *  –gibbs_lj                   Use gibbse ensemble calculation for Lennard-Johnes potetial (two boxes of total V and N)
      *  –gibbs_lj2                   Use gibbse ensemble calculation for Lennard-Johnes potetial (two different boxes)
+     *  –switch_rate                Percentage of interchange steps (default 0.05 - 5%)
      *  –rostar                     Initial Lennard-Johnes Ro* parameter (default 0.1)
      *  –rostar1                     Initial Lennard-Johnes Ro* parameter for first box (default 0.1)
      *  –rostar2                     Initial Lennard-Johnes Ro* parameter for second box (default 0.1)

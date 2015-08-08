@@ -86,7 +86,7 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
     // ------------ Gibbs additional options ---------------------
     protected double maxDeltaV;
     // what move was made: 0. move random particle or 1. change V or 2. interchange particles
-    private int lastStepType = 0;
+    protected int lastStepType = 0;
     // what box was changed during last MC step: 0,1 or -1 (meaning both)
     private int lastBox = -1;
 
@@ -234,9 +234,7 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
      * with some probability
      */
     protected final boolean play(int step) {
-        // 0. move random particle or 1. change V1 or 2. interchange particle
-//        lastStepType = step % 3;
-        lastStepType = step % 3;
+        setStepType(step);
 
         final double expoValue = testMove();
 
@@ -256,6 +254,11 @@ public abstract class GibbsEnsemble extends MetropolisEnsemble {
         }
 
         return false;
+    }
+
+    protected void setStepType(int step) {
+//        lastStepType = step % 3;
+        lastStepType = step % 3;
     }
 
     /**

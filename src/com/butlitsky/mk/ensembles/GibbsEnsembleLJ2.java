@@ -40,7 +40,7 @@ public class GibbsEnsembleLJ2 extends GibbsEnsemble {
         T = opt.getT();
         boxBorder = CLOptions.N1 / 2;
 
-        System.out.println("\n N = " + N + ", Nei = " + Nei + ", boxBorder = " + boxBorder);
+        System.out.println("\n N = " + N + ", Nei = " + Nei + ", N2 = " + CLOptions.N2 + ", boxBorder = " + boxBorder);
 
         // V is in CM^3 !!!
         V[0] = FastMath.pow(mySigma * BOHR, 3) * CLOptions.N1 / CLOptions.RO_STAR1;
@@ -66,7 +66,6 @@ public class GibbsEnsembleLJ2 extends GibbsEnsemble {
 
         initParticlesConfig();
     }
-
 
     /**
      * Pure Lennard–Johnes (r — in Bohr radiuses
@@ -116,5 +115,20 @@ public class GibbsEnsembleLJ2 extends GibbsEnsemble {
 
     protected final double getEnergy(double r) {
         return getPotential(r);
+    }
+
+    @Override
+    protected void setStepType(int step) {
+        // according to Athanatheos — initial steps to equilibrate boxes separately
+        if (step < CLOptions.INITIAL_STEPS) {
+            lastStepType = 0;
+        } else {
+            // otherwise x% of steps must be interchange particles only
+            if (CLOptions.SWITCH_RATE > myRandom(1.0))
+                lastStepType = 2;
+            else
+                lastStepType = ((step % 50) > 0) ? 0 : 1;
+//                lastStepType = step % 2;
+        }
     }
 }

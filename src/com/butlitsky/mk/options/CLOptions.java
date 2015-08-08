@@ -115,6 +115,11 @@ public class CLOptions {
      */
     public static double MAX_DELTA_V = 0.07;
 
+    /**
+     * LJ2 Gibbs ratio of interchange steps (percentage)
+     */
+    public static double SWITCH_RATE = 0.05;
+
 
     private CLOptions() {
     }
@@ -178,13 +183,20 @@ public class CLOptions {
             if (line.hasOption("rostar1")) {
                 RO_STAR1 = Double.parseDouble(line.getOptionValue("rostar1"));
             }
+
             if (line.hasOption("rostar2")) {
                 RO_STAR2 = Double.parseDouble(line.getOptionValue("rostar2"));
+            }
+
+            if (line.hasOption("switchrate")) {
+                SWITCH_RATE = Double.parseDouble(line.getOptionValue("switchrate"));
+                System.out.println("SWITCH_RATE = " + SWITCH_RATE);
             }
 
             if (line.hasOption("n1")) {
                 N1 = Integer.parseInt(line.getOptionValue("n1"));
             }
+
             if (line.hasOption("n2")) {
                 N2 = Integer.parseInt(line.getOptionValue("n2"));
             }
@@ -328,14 +340,19 @@ public class CLOptions {
         Option rostar1 = OptionBuilder.withArgName("RO_STAR").hasArg()
                 .withDescription("Initial Lennard-Johnes Ro* 1st box (0.1 default)")
                 .withLongOpt("rostar1").create("rostar1");
+
         Option rostar2 = OptionBuilder.withArgName("RO_STAR").hasArg()
                 .withDescription("Initial Lennard-Johnes Ro* 2nd box (0.1 default)")
                 .withLongOpt("rostar2").create("rostar2");
+// new in 13.0
+        Option switchrate = OptionBuilder.withArgName("RATE").hasArg()
+                .withDescription("Percentage of interchange steps (default 0.05)")
+                .withLongOpt("switchrate").create("switchrate");
 
 //        new in 12.0
         Option n1 = OptionBuilder.withArgName("N").hasArg()
                 .withDescription("Initial Lennard-Johnes N 1st box (0.1 default)")
-                .withLongOpt("n1").create("n2");
+                .withLongOpt("n1").create("n1");
         Option n2 = OptionBuilder.withArgName("N").hasArg()
                 .withDescription("Initial Lennard-Johnes N 2nd box (0.1 default)")
                 .withLongOpt("n2").create("n2");
@@ -373,6 +390,7 @@ public class CLOptions {
         options.addOption(rostar);
         options.addOption(rostar1);
         options.addOption(rostar2);
+        options.addOption(switchrate);
         options.addOption(n1);
         options.addOption(n2);
 
